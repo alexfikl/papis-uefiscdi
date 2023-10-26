@@ -9,7 +9,7 @@ keywords = [
 license = { text = "MIT" }
 maintainers = [{ name = "Alexandru Fikl", email = "alexfikl@gmail.com" }]
 authors = [{ name = "Alexandru Fikl", email = "alexfikl@gmail.com" }]
-requires-python = ">=3.8"
+requires-python = ">=3.9"
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Environment :: Console",
@@ -20,7 +20,6 @@ classifiers = [
     "Operating System :: POSIX",
     "Operating System :: Unix",
     "Programming Language :: Python :: 3 :: Only",
-    "Programming Language :: Python :: 3.8",
     "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
@@ -72,7 +71,7 @@ requires = [
 
 [tool.black]
 line-length = 88
-target-version = ['py38']
+target-version = ['py39', 'py310', 'py311', 'py312']
 exclude='\.eggs|\.git|\.mypy_cache|build|dist|\.pytest_cache|\.pytype'
 
 [tool.isort]
