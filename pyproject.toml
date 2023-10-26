@@ -61,7 +61,7 @@ uefiscdi = "papis_uefiscdi.command:cli"
 packages = ["papis_uefiscdi"]
 
 [tool.setuptools.package-data]
-papis_extras = ["py.typed"]
+papis_uefiscdi = ["py.typed"]
 
 [build-system]
 build-backend = "setuptools.build_meta"
