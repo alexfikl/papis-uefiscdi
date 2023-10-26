@@ -1,0 +1,11 @@
+# files
+*~
+*.pyc
+*.pyo
+*.swp
+
+# directories
+__pycache__
+*.egg-info
+_build
+tags
