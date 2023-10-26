@@ -386,7 +386,7 @@ class TemporaryLibrary(TemporaryConfiguration):
             populate_library(self.libdir)
 
         if self.use_git:
-            from papis.utils import run
+            from papis_uefiscdi.utils import run
 
             # make sure to initialize a git repository for the library
             run(["git", "init", "-b", "main"], cwd=self.libdir)

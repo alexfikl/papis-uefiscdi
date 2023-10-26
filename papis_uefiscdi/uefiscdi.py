@@ -111,12 +111,12 @@ def _parse_jif_2023(before: tuple[str, str], current: str) -> Journal | None:
     if index not in INDEX_ID_TO_NAME:
         return None
 
-    from papis_extras.cleaners import string_cleaner_impl as capitalize
+    from titlecase import titlecase
 
     return Journal(
-        category=capitalize(category.strip(), titlecased=True),
+        category=titlecase(category.strip()),
         index=index.upper(),
-        name=capitalize(journal.strip(), titlecased=True),
+        name=titlecase(journal.strip()),
         issn=issn.upper(),
         eissn=eissn.upper(),
         quartile=quartile,

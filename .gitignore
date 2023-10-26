@@ -3,6 +3,7 @@
 *.pyc
 *.pyo
 *.swp
+*.csv
 
 # directories
 __pycache__

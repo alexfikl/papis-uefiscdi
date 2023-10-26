@@ -7,6 +7,7 @@ import click
 
 import papis.cli
 
+
 @click.command()
 @click.help_option("--help", "-h")
 @papis.cli.query_argument()

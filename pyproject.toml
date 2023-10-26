@@ -33,6 +33,7 @@ dependencies = [
     "platformdirs",
     "pypdf",
     "pyperclip",
+    "titlecase",
 ]
 [project.optional-dependencies]
 dev = [
@@ -128,5 +129,6 @@ multiline-quotes = "double"
 [[tool.mypy.overrides]]
 module = [
     "pyperclip.*",
+    "titlecase.*",
 ]
 ignore_missing_imports = true

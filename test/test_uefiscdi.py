@@ -9,7 +9,7 @@ from papis_uefiscdi.testing import TemporaryConfiguration
 
 
 def test_parse_journal_impact_factor(tmp_config: TemporaryConfiguration) -> None:
-    from papis.downloaders import download_document
+    from papis_uefiscdi.utils import download_document
 
     url = "https://uefiscdi.gov.ro/resource-866009-zone.iunie.2023.jif.pdf"
     filename = download_document(url, expected_document_extension="pdf")
@@ -25,7 +25,7 @@ def test_parse_journal_impact_factor(tmp_config: TemporaryConfiguration) -> None
 
 
 def test_parse_article_influence_score(tmp_config: TemporaryConfiguration) -> None:
-    from papis.downloaders import download_document
+    from papis_uefiscdi.utils import download_document
 
     url = "https://uefiscdi.gov.ro/resource-866007-zone.iunie.2023.ais.pdf"
     filename = download_document(url, expected_document_extension="pdf")
