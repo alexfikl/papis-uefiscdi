@@ -47,11 +47,6 @@ dev = [
     "types-PyYAML",
     "types-requests",
 ]
-docs = [
-    "sphinx",
-    "sphinx-book-theme",
-    "sphinx-click",
-]
 [project.urls]
 Repository = "https://github.com/alexfikl/papis-uefiscdi"
 [project.entry-points."papis.command"]
