@@ -285,7 +285,7 @@ def _decrypt_file(filename: pathlib.Path, password: str) -> pathlib.Path:
             msfile.load_key(password=password)
             msfile.decrypt(outf)
 
-        return outf.name
+        return pathlib.Path(outf.name)
 
 
 def _parse_ais_score_entries_2023(filename: pathlib.Path) -> list[ScoreEntry]:
