@@ -203,7 +203,13 @@ def parse_uefiscdi_journal_impact_factor(
         logger.info("Extracted %d journal from %d pages", len(results), len(pdf.pages))
 
     return sorted(
-        results, key=lambda j: (j["index"], j["category"], j["quartile"], j["position"])
+        results,
+        key=lambda j: (
+            j["index"],
+            j["category"],
+            j["quartile"] if j["quartile"][0] == "Q" else "Q9",
+            j["position"],
+        ),
     )
 
 
@@ -264,7 +270,13 @@ def parse_uefiscdi_article_influence_score(
         logger.info("Extracted %d journal from %d pages", len(results), len(pdf.pages))
 
     return sorted(
-        results, key=lambda j: (j["index"], j["category"], j["quartile"], j["position"])
+        results,
+        key=lambda j: (
+            j["index"],
+            j["category"],
+            j["quartile"] if j["quartile"][0] == "Q" else "Q9",
+            j["position"],
+        ),
     )
 
 
@@ -279,13 +291,16 @@ def _decrypt_file(filename: pathlib.Path, password: str) -> pathlib.Path:
 
     import msoffcrypto
 
-    with tempfile.NamedTemporaryFile(suffix=filename.suffix, delete=False) as outf:
-        with open(filename, "rb") as f:
-            msfile = msoffcrypto.OfficeFile(f)
-            msfile.load_key(password=password)
-            msfile.decrypt(outf)
+    try:
+        with tempfile.NamedTemporaryFile(suffix=filename.suffix, delete=False) as outf:
+            with open(filename, "rb") as f:
+                msfile = msoffcrypto.OfficeFile(f)
+                msfile.load_key(password=password)
+                msfile.decrypt(outf)
 
-        return pathlib.Path(outf.name)
+            return pathlib.Path(outf.name)
+    except msoffcrypto.exceptions.DecryptionError:
+        return filename
 
 
 def _parse_ais_score_entries_2023(filename: pathlib.Path) -> list[ScoreEntry]:
@@ -329,8 +344,6 @@ def _parse_ais_score_entries_2023(filename: pathlib.Path) -> list[ScoreEntry]:
             )
         )
 
-    logger.info("Extracted %d journal from '%s'", len(results), filename)
-
     return results
 
 
@@ -351,14 +364,17 @@ def parse_uefiscdi_article_influence_scores(
     if version not in _SUPPORTED_VERSIONS:
         raise ValueError(f"Unknown version '{version}'")
 
-    filename = pathlib.Path(filename)
+    decrypted_filename = pathlib.Path(filename)
     if password is not None:
-        filename = _decrypt_file(filename, password)
+        decrypted_filename = _decrypt_file(decrypted_filename, password)
 
     if version == 2023:
-        return _parse_ais_score_entries_2023(filename)
+        results = _parse_ais_score_entries_2023(decrypted_filename)
     else:
         raise AssertionError
+
+    logger.info("Extracted %d journals from '%s'", len(results), filename)
+    return results
 
 
 # }}}
@@ -385,14 +401,17 @@ def parse_uefiscdi_relative_influence_scores(
     if version not in _SUPPORTED_VERSIONS:
         raise ValueError(f"Unknown version '{version}'")
 
-    filename = pathlib.Path(filename)
+    decrypted_filename = pathlib.Path(filename)
     if password is not None:
-        filename = _decrypt_file(filename, password)
+        decrypted_filename = _decrypt_file(decrypted_filename, password)
 
     if version == 2023:
-        return _parse_ris_score_entries_2023(filename)
+        results = _parse_ris_score_entries_2023(decrypted_filename)
     else:
         raise AssertionError
+
+    logger.info("Extracted %d journals from '%s'", len(results), filename)
+    return results
 
 
 # }}}
@@ -419,14 +438,17 @@ def parse_uefiscdi_relative_impact_factors(
     if version not in _SUPPORTED_VERSIONS:
         raise ValueError(f"Unknown version '{version}'")
 
-    filename = pathlib.Path(filename)
+    decrypted_filename = pathlib.Path(filename)
     if password is not None:
-        filename = _decrypt_file(filename, password)
+        decrypted_filename = _decrypt_file(decrypted_filename, password)
 
     if version == 2023:
-        return _parse_ris_score_entries_2023(filename)
+        results = _parse_rif_score_entries_2023(decrypted_filename)
     else:
         raise AssertionError
+
+    logger.info("Extracted %d journals from '%s'", len(results), filename)
+    return results
 
 
 # }}}
