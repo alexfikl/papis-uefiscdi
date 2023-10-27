@@ -296,7 +296,7 @@ def _parse_ais_score_entries_2023(filename: pathlib.Path) -> list[ScoreEntry]:
         logger.error("Could not load workbook.")
         return []
 
-    rows = wb.active.rows   # type: ignore[union-attr]
+    rows = wb.active.rows  # type: ignore[union-attr]
     _ = next(rows)
 
     from titlecase import titlecase
