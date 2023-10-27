@@ -12,4 +12,4 @@ import papis.cli
 @click.help_option("--help", "-h")
 @papis.cli.query_argument()
 def cli(query: str) -> None:
-    """Update UEFISCDI journal impact factors."""
+    """Manage UEFISCDI journal impact factors and other indicators."""
