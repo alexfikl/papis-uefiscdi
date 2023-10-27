@@ -32,16 +32,16 @@ class ZoneEntry(TypedDict):
 
     #: Web of Science category for this journal.
     category: str
-    #: Web of Science index identifier (see also :attr:`index_name`).
+    #: Citation index identifier.
     index: str
 
-    #: Name of the journal.
+    #: Name of the journal in the provided format.
     name: str
     #: International Standard Serial Number (ISSN) assigned to the journal.
     issn: str
     #: Electronic ISSN assigned to the journal.
     eissn: str
-    #: Quartile to which the journal belongs, in the ``QX`` format.
+    #: Quartile to which the journal belongs to, in the ``QX`` format.
     quartile: str
     #: Position in its quartile based on the Journal Impact factor (JIF)
     #: or the Article Influence Score (AIS).
@@ -63,7 +63,8 @@ class ScoreEntry(TypedDict):
     #: Electronic ISSN assigned to the journal.
     eissn: str
 
-    #: Numerical score as a floating point number.
+    #: Numerical score as a floating point number. If the journal does not have
+    #: a score, but is still in the database, this is set to -1.
     score: float
 
 
@@ -72,7 +73,7 @@ class ScoreEntry(TypedDict):
 # {{{ Journal Impact Factor
 
 
-_SUPPORTED_VERSION = {2023}
+_SUPPORTED_VERSIONS = {2023}
 
 _SUPPORTED_QUARTILES = {"Q1", "Q2", "Q3", "Q4", "N/A"}
 
@@ -155,20 +156,20 @@ def _parse_jif_zone_entry_2023(
 def parse_uefiscdi_journal_impact_factor(
     filename: str | pathlib.Path, *, version: int = 2023
 ) -> list[ZoneEntry]:
-    """Parse the tables from the PDF given at *url*.
+    """Parse Journal Impact Factor (JIF) ranking data from the given filename.
 
-    Table parsing from PDFs is notoriously difficult, so this procedure is not
+    Some versions of the UEFISCDI database are given in PDF format. Table
+    parsing from PDFs is notoriously difficult, so this procedure is not
     exact. Additional heuristics and edge cases will be added in time.
 
-    :returns: a :class:`list` of journals in the order they appear in the PDF
-        file, which is essentially ordered by Web of Science Category, then
-        quartile and the position in quartile.
+    :returns: a :class:`list` of journals ordered by index, category, quartile
+        and the position in quartile.
     """
     filename = pathlib.Path(filename)
     if not filename.exists():
         raise FileNotFoundError(filename)
 
-    if version not in _SUPPORTED_VERSION:
+    if version not in _SUPPORTED_VERSIONS:
         raise ValueError(f"Unknown version '{version}'")
 
     import pypdf
@@ -216,20 +217,20 @@ _parse_ais_zone_entry_2023 = _parse_jif_zone_entry_2023
 def parse_uefiscdi_article_influence_score(
     filename: str | pathlib.Path, *, version: int = 2023
 ) -> list[ZoneEntry]:
-    """Parse the tables from the PDF given at *url*.
+    """Parse Article Influence Score (AIS) ranking data from the given filename.
 
-    Table parsing from PDFs is notoriously difficult, so this procedure is not
+    Some versions of the UEFISCDI database are given in PDF format. Table
+    parsing from PDFs is notoriously difficult, so this procedure is not
     exact. Additional heuristics and edge cases will be added in time.
 
-    :returns: a :class:`list` of journals in the order they appear in the PDF
-        file, which is essentially ordered by Web of Science Category, then
-        quartile and the position in quartile.
+    :returns: a :class:`list` of journals ordered by index, category, quartile
+        and the position in quartile.
     """
     filename = pathlib.Path(filename)
     if not filename.exists():
         raise FileNotFoundError(filename)
 
-    if version not in _SUPPORTED_VERSION:
+    if version not in _SUPPORTED_VERSIONS:
         raise ValueError(f"Unknown version '{version}'")
 
     import pypdf
@@ -274,17 +275,17 @@ def parse_uefiscdi_article_influence_score(
 
 
 def _decrypt_file(filename: pathlib.Path, password: str) -> pathlib.Path:
+    import tempfile
+
     import msoffcrypto
 
-    outfile = filename.with_stem(f"{filename.stem}-decrypted")
-    with open(filename, "rb") as f:
-        msfile = msoffcrypto.OfficeFile(f)
-        msfile.load_key(password=password)
-
-        with open(outfile, "wb") as outf:
+    with tempfile.NamedTemporaryFile(suffix=filename.suffix, delete=False) as outf:
+        with open(filename, "rb") as f:
+            msfile = msoffcrypto.OfficeFile(f)
+            msfile.load_key(password=password)
             msfile.decrypt(outf)
 
-    return outfile
+        return outf.name
 
 
 def _parse_ais_score_entries_2023(filename: pathlib.Path) -> list[ScoreEntry]:
@@ -292,7 +293,7 @@ def _parse_ais_score_entries_2023(filename: pathlib.Path) -> list[ScoreEntry]:
 
     wb = openpyxl.load_workbook(filename, read_only=True)
     if wb is None:
-        logger.error("Could not load workbook from '%s'", filename)
+        logger.error("Could not load workbook.")
         return []
 
     rows = wb.active.rows   # type: ignore[union-attr]
@@ -339,7 +340,15 @@ def parse_uefiscdi_article_influence_scores(
     version: int = 2023,
     password: str | None = "uefiscdi",  # noqa: S107
 ) -> list[ScoreEntry]:
-    if version not in _SUPPORTED_VERSION:
+    """Parse Article Influence Score (AIS) data from the given filename.
+
+    This data is usually given in the XLSX Excel format and can be easily
+    retrieved from the documents.
+
+    :arg password: password for the *filename*, if any, as given on the
+        `official website <https://uefiscdi.gov.ro/scientometrie-baze-de-date>`__.
+    """
+    if version not in _SUPPORTED_VERSIONS:
         raise ValueError(f"Unknown version '{version}'")
 
     filename = pathlib.Path(filename)
@@ -363,9 +372,17 @@ def parse_uefiscdi_relative_influence_scores(
     filename: str | pathlib.Path,
     *,
     version: int = 2023,
-    password: str | None = "uefiscdi",  # noqa: S107
+    password: str | None = None,
 ) -> list[ScoreEntry]:
-    if version not in _SUPPORTED_VERSION:
+    """Parse Relative Influence Score (RIS) data from the given filename.
+
+    This data is usually given in the XLSX Excel format and can be easily
+    retrieved from the document.
+
+    :arg password: password for the *filename*, if any, as given on the
+        `official website <https://uefiscdi.gov.ro/scientometrie-baze-de-date>`__.
+    """
+    if version not in _SUPPORTED_VERSIONS:
         raise ValueError(f"Unknown version '{version}'")
 
     filename = pathlib.Path(filename)
@@ -389,9 +406,17 @@ def parse_uefiscdi_relative_impact_factors(
     filename: str | pathlib.Path,
     *,
     version: int = 2023,
-    password: str | None = "uefiscdi",  # noqa: S107
+    password: str | None = None,
 ) -> list[ScoreEntry]:
-    if version not in _SUPPORTED_VERSION:
+    """Parse Relative Impact Factor (RIF) data from the given filename.
+
+    This data is usually given in the XLSX Excel format and can be easily
+    retrieved from the document.
+
+    :arg password: password for the *filename*, if any, as given on the
+        `official website <https://uefiscdi.gov.ro/scientometrie-baze-de-date>`__.
+    """
+    if version not in _SUPPORTED_VERSIONS:
         raise ValueError(f"Unknown version '{version}'")
 
     filename = pathlib.Path(filename)
