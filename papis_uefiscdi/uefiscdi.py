@@ -21,8 +21,14 @@ INDEX_ID_TO_NAME = {
 }
 
 
-class Journal(TypedDict):
-    """Journal entry information from the UEFISCDI databases."""
+class ZoneEntry(TypedDict):
+    """Journal entry information from the UEFISCDI databases.
+
+    This entry corresponds to the Web of Science Core Collection data for
+    Journal Impact Factors (JIF) and Article Influence Scores (AIS) gathered
+    by the UEFISCDI. These entries are distinguished based on their quartile,
+    referred to as zones in the UEFISCDI nomenclature.
+    """
 
     #: Web of Science category for this journal.
     category: str
@@ -42,9 +48,29 @@ class Journal(TypedDict):
     position: int
 
 
+class ScoreEntry(TypedDict):
+    """Journal entry information from the UEFISCDI databases.
+
+    This entry corresponds to the Journal Citation Report (JCR) indicators that
+    are published by the UEFISCDI. These entries are distinguished based on their
+    score.
+    """
+
+    #: Name of the journal.
+    name: str
+    #: International Standard Serial Number (ISSN) assigned to the journal.
+    issn: str
+    #: Electronic ISSN assigned to the journal.
+    eissn: str
+
+    #: Numerical score as a floating point number.
+    score: float
+
+
 # }}}
 
 # {{{ Journal Impact Factor
+
 
 _SUPPORTED_VERSION = {2023}
 
@@ -58,7 +84,9 @@ def window(iterable: list[str]) -> Iterator[tuple[tuple[str, str], str]]:
         yield (iterable[i], iterable[i + 1]), x
 
 
-def _parse_jif_2023(before: tuple[str, str], current: str) -> Journal | None:
+def _parse_jif_zone_entry_2023(
+    before: tuple[str, str], current: str
+) -> ZoneEntry | None:
     """Row format is given as
 
         WOS_CATEGORY - INDEX | JOURNAL | ISSN | EISSN | QUARTILE | POSITION
@@ -113,7 +141,7 @@ def _parse_jif_2023(before: tuple[str, str], current: str) -> Journal | None:
 
     from titlecase import titlecase
 
-    return Journal(
+    return ZoneEntry(
         category=titlecase(category.strip()),
         index=index.upper(),
         name=titlecase(journal.strip()),
@@ -126,7 +154,7 @@ def _parse_jif_2023(before: tuple[str, str], current: str) -> Journal | None:
 
 def parse_uefiscdi_journal_impact_factor(
     filename: str | pathlib.Path, *, version: int = 2023
-) -> list[Journal]:
+) -> list[ZoneEntry]:
     """Parse the tables from the PDF given at *url*.
 
     Table parsing from PDFs is notoriously difficult, so this procedure is not
@@ -149,11 +177,11 @@ def parse_uefiscdi_journal_impact_factor(
         pdf = pypdf.PdfReader(f)
 
         if version == 2023:
-            parse = _parse_jif_2023
+            parse = _parse_jif_zone_entry_2023
         else:
             raise AssertionError
 
-        results: list[Journal] = []
+        results: list[ZoneEntry] = []
         for i, p in enumerate(pdf.pages):
             lines = [line.strip() for line in p.extract_text().split("\n")]
 
@@ -182,10 +210,12 @@ def parse_uefiscdi_journal_impact_factor(
 
 # {{{ Article Influence Score
 
+_parse_ais_zone_entry_2023 = _parse_jif_zone_entry_2023
+
 
 def parse_uefiscdi_article_influence_score(
     filename: str | pathlib.Path, *, version: int = 2023
-) -> list[Journal]:
+) -> list[ZoneEntry]:
     """Parse the tables from the PDF given at *url*.
 
     Table parsing from PDFs is notoriously difficult, so this procedure is not
@@ -208,11 +238,11 @@ def parse_uefiscdi_article_influence_score(
         pdf = pypdf.PdfReader(f)
 
         if version == 2023:
-            parse = _parse_jif_2023
+            parse = _parse_ais_zone_entry_2023
         else:
             raise AssertionError
 
-        results: list[Journal] = []
+        results: list[ZoneEntry] = []
         for i, p in enumerate(pdf.pages):
             lines = [line.strip() for line in p.extract_text().split("\n")]
 
@@ -235,6 +265,143 @@ def parse_uefiscdi_article_influence_score(
     return sorted(
         results, key=lambda j: (j["index"], j["category"], j["quartile"], j["position"])
     )
+
+
+# }}}
+
+
+# {{{ Article Influence Score
+
+
+def _decrypt_file(filename: pathlib.Path, password: str) -> pathlib.Path:
+    import msoffcrypto
+
+    outfile = filename.with_stem(f"{filename.stem}-decrypted")
+    with open(filename, "rb") as f:
+        msfile = msoffcrypto.OfficeFile(f)
+        msfile.load_key(password=password)
+
+        with open(outfile, "wb") as outf:
+            msfile.decrypt(outf)
+
+    return outfile
+
+
+def _parse_ais_score_entries_2023(filename: pathlib.Path) -> list[ScoreEntry]:
+    import openpyxl
+
+    wb = openpyxl.load_workbook(filename, read_only=True)
+    if wb is None:
+        logger.error("Could not load workbook from '%s'", filename)
+        return []
+
+    rows = wb.active.rows   # type: ignore[union-attr]
+    _ = next(rows)
+
+    from titlecase import titlecase
+
+    results: list[ScoreEntry] = []
+    for row in rows:
+        if len(row) == 4:
+            # NOTE: RIS and RIF entries have 4 columns
+            journal, issn, eissn, score = row
+        elif len(row) == 6:
+            # NOTE: AIS has 6 columns
+            journal, issn, eissn, _, score, _ = row
+        else:
+            continue
+
+        if score.value is None:
+            break
+
+        try:
+            score = float(score.value)
+        except ValueError:
+            score = -1
+
+        results.append(
+            ScoreEntry(
+                name=titlecase(journal.value),
+                issn=issn.value,
+                eissn=eissn.value,
+                score=score,
+            )
+        )
+
+    logger.info("Extracted %d journal from '%s'", len(results), filename)
+
+    return results
+
+
+def parse_uefiscdi_article_influence_scores(
+    filename: str | pathlib.Path,
+    *,
+    version: int = 2023,
+    password: str | None = "uefiscdi",  # noqa: S107
+) -> list[ScoreEntry]:
+    if version not in _SUPPORTED_VERSION:
+        raise ValueError(f"Unknown version '{version}'")
+
+    filename = pathlib.Path(filename)
+    if password is not None:
+        filename = _decrypt_file(filename, password)
+
+    if version == 2023:
+        return _parse_ais_score_entries_2023(filename)
+    else:
+        raise AssertionError
+
+
+# }}}
+
+# {{{ Relative Influence Score
+
+_parse_ris_score_entries_2023 = _parse_ais_score_entries_2023
+
+
+def parse_uefiscdi_relative_influence_scores(
+    filename: str | pathlib.Path,
+    *,
+    version: int = 2023,
+    password: str | None = "uefiscdi",  # noqa: S107
+) -> list[ScoreEntry]:
+    if version not in _SUPPORTED_VERSION:
+        raise ValueError(f"Unknown version '{version}'")
+
+    filename = pathlib.Path(filename)
+    if password is not None:
+        filename = _decrypt_file(filename, password)
+
+    if version == 2023:
+        return _parse_ris_score_entries_2023(filename)
+    else:
+        raise AssertionError
+
+
+# }}}
+
+# {{{ Relative Impact Factor
+
+_parse_rif_score_entries_2023 = _parse_ais_score_entries_2023
+
+
+def parse_uefiscdi_relative_impact_factors(
+    filename: str | pathlib.Path,
+    *,
+    version: int = 2023,
+    password: str | None = "uefiscdi",  # noqa: S107
+) -> list[ScoreEntry]:
+    if version not in _SUPPORTED_VERSION:
+        raise ValueError(f"Unknown version '{version}'")
+
+    filename = pathlib.Path(filename)
+    if password is not None:
+        filename = _decrypt_file(filename, password)
+
+    if version == 2023:
+        return _parse_ris_score_entries_2023(filename)
+    else:
+        raise AssertionError
 
 
 # }}}

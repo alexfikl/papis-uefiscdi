@@ -43,6 +43,7 @@ dev = [
     "pytest",
     "ruff",
     "types-beautifulsoup4",
+    "types-openpyxl",
     "types-python-slugify",
     "types-PyYAML",
     "types-requests",
@@ -125,5 +126,6 @@ multiline-quotes = "double"
 module = [
     "pyperclip.*",
     "titlecase.*",
+    "msoffcrypto.*",
 ]
 ignore_missing_imports = true
