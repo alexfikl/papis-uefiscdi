@@ -1,0 +1,13 @@
+include .codespell-ignore
+include .reuse/dep5
+include Makefile
+include README.rst
+include pyproject.toml
+include requirements-dev.txt
+include requirements.txt
+include setup.py
+recursive-include LICENSES *.txt
+
+recursive-include papis_uefiscdi *.typed
+recursive-include papis_uefiscdi *.py
+recursive-include test *.py
