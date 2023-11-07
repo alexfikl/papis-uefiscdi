@@ -125,7 +125,7 @@ def parse_uefiscdi(
 @cli.command("update")
 @click.help_option("--help", "-h")
 @click.option("--database", type=click.Choice(list(UEFISCDI_SUPPORTED_DATABASES)))
-@papis.cli.bool_flag("--no-password", flag_value=True, default=False)
+@papis.cli.option("--no-password", flag_value=True, default=False, is_flag=True)
 def update(database: str, no_password: str | None) -> None:
     config_dir = pathlib.Path(papis.config.get_config_folder())
 
@@ -173,7 +173,7 @@ def add(
     from papis.api import save_doc
 
     documents = papis.cli.handle_doc_folder_query_all_sort(
-        query, doc_folder, sort_field, sort_reverse, all_
+        query, doc_folder[0], sort_field, sort_reverse, all_
     )
 
     for doc in documents:
