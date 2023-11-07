@@ -64,7 +64,8 @@ manifest:		## Update MANIFEST.in file
 
 REQUIREMENTS=\
 	requirements.txt \
-	requirements-dev.txt
+	requirements-dev.txt \
+	docs/requirements.txt
 
 requirements.txt: pyproject.toml
 	$(PYTHON) -m piptools compile \
@@ -75,6 +76,12 @@ requirements-dev.txt: pyproject.toml
 	$(PYTHON) -m piptools compile \
 		--resolver=backtracking --upgrade \
 		--extra dev --extra docs \
+		-o $@ $<
+
+docs/requirements.txt: pyproject.toml
+	$(PYTHON) -m piptools compile \
+		--resolver=backtracking --upgrade \
+		--extra docs \
 		-o $@ $<
 
 pin: $(REQUIREMENTS) 	## Pin dependencies versions to requirements.txt
