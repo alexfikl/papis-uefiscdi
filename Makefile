@@ -103,6 +103,9 @@ ctags:			## Regenerate ctags
 		--tag-relative=yes \
 		--exclude=.git \
 		--exclude=docs \
+		--exclude=.ruff_cache \
+		--exclude=.mypy_cache \
+		--exclude=.pytest_cache \
 		--python-kinds=-i \
 		--language-force=python
 .PHONY: ctags

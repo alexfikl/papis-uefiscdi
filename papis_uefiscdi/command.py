@@ -152,12 +152,10 @@ def add_uefiscdi(doc: Document) -> None:
 @cli.command("add")
 @click.help_option("--help", "-h")
 @papis.cli.query_argument()
-@papis.cli.doc_folder_option()
 @papis.cli.all_option()
 @papis.cli.sort_option()
 def add(
     query: str,
-    doc_folder: tuple[str, ...],
     all_: bool,
     sort_field: str | None,
     sort_reverse: bool,
@@ -166,7 +164,7 @@ def add(
     from papis.api import save_doc
 
     documents = papis.cli.handle_doc_folder_query_all_sort(
-        query, doc_folder[0], sort_field, sort_reverse, all_  # type: ignore
+        query, None, sort_field, sort_reverse, all_
     )
 
     for doc in documents:
