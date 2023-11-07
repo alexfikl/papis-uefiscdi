@@ -44,7 +44,7 @@ papis.config.register_default_settings(
 )
 
 
-def get_uefiscdi_database_path(database: str) -> pathlib.Path | None:
+def get_uefiscdi_database_path(database: str) -> pathlib.Path:
     config_dir = pathlib.Path(papis.config.get_config_folder())
     return config_dir / "uefiscdi" / f"{database}.json"
 
@@ -236,5 +236,6 @@ def add(
         )
         doc[doc_key] = result
         save_doc(doc)
+
 
 # }}}
