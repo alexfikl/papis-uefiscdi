@@ -338,13 +338,15 @@ def _parse_ais_score_entries_2023(filename: pathlib.Path) -> list[ScoreEntry]:
         except ValueError:
             score = None
 
-        issn_clean = issn.value.strip().upper()
-        eissn_clean = eissn.value.strip().upper()
+        issn_clean = str(issn.value).strip().upper()
+        eissn_clean = str(eissn.value).strip().upper()
+
         results.append(
             ScoreEntry(
                 name=titlecase(journal.value),
-                issn=None if issn_clean == "N/A" else issn_clean,
-                eissn=None if eissn_clean == "N/A" else eissn_clean,
+                # NOTE: all ISSNs are of the form XXXX-XXX, so we ignore others
+                issn=None if len(issn_clean) != 9 else issn_clean,
+                eissn=None if len(eissn_clean) != 9 else eissn_clean,
                 score=score,
             )
         )
