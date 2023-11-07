@@ -8,6 +8,12 @@ include requirements.txt
 include setup.py
 recursive-include LICENSES *.txt
 
+recursive-include docs *.py
+recursive-include docs *.rst
+recursive-include docs *.txt
+recursive-include docs Makefile
 recursive-include papis_uefiscdi *.typed
 recursive-include papis_uefiscdi *.py
 recursive-include test *.py
+
+prune docs/_build
