@@ -14,6 +14,8 @@ logger = papis.logging.get_logger(__name__)
 
 # {{{ utils
 
+#: A mapping of indexes (as they appear in the UEFISCDI databases) to their
+#: full names.
 INDEX_ID_TO_NAME = {
     "AHCI": "Arts Humanities Citation Index",
     "SCIE": "Science Citation Index Expanded",
@@ -32,17 +34,17 @@ class ZoneEntry(TypedDict):
 
     #: Web of Science category for this journal.
     category: str
-    #: Citation index identifier.
+    #: Citation index identifier (see :data:`INDEX_ID_TO_NAME`).
     index: str
 
     #: Name of the journal in the provided format.
-    name: str
+    name: str | None
     #: International Standard Serial Number (ISSN) assigned to the journal.
-    issn: str
+    issn: str | None
     #: Electronic ISSN assigned to the journal.
-    eissn: str
+    eissn: str | None
     #: Quartile to which the journal belongs to, in the ``QX`` format.
-    quartile: str
+    quartile: str | None
     #: Position in its quartile based on the Journal Impact factor (JIF)
     #: or the Article Influence Score (AIS).
     position: int
@@ -59,13 +61,12 @@ class ScoreEntry(TypedDict):
     #: Name of the journal.
     name: str
     #: International Standard Serial Number (ISSN) assigned to the journal.
-    issn: str
+    issn: str | None
     #: Electronic ISSN assigned to the journal.
-    eissn: str
+    eissn: str | None
 
-    #: Numerical score as a floating point number. If the journal does not have
-    #: a score, but is still in the database, this is set to -1.
-    score: float
+    #: Numerical score as a floating point number.
+    score: float | None
 
 
 # }}}
@@ -115,11 +116,13 @@ def _parse_jif_zone_entry_2023(
         return None
 
     rest, eissn = rest.rsplit(" ", maxsplit=1)
+    eissn = eissn.strip().upper()
 
     if not _ISSN_RE.match(eissn):
         return None
 
     rest, issn = rest.rsplit(" ", maxsplit=1)
+    issn = issn.strip().upper()
 
     if not _ISSN_RE.match(issn):
         return None
@@ -146,9 +149,9 @@ def _parse_jif_zone_entry_2023(
         category=titlecase(category.strip()),
         index=index.upper(),
         name=titlecase(journal.strip()),
-        issn=issn.upper(),
-        eissn=eissn.upper(),
-        quartile=quartile,
+        issn=None if issn == "N/A" else issn,
+        eissn=None if eissn == "N/A" else eissn,
+        quartile=None if quartile == "N/A" else quartile,
         position=int(position),
     )
 
@@ -207,7 +210,7 @@ def parse_uefiscdi_journal_impact_factor(
         key=lambda j: (
             j["index"],
             j["category"],
-            j["quartile"] if j["quartile"][0] == "Q" else "Q9",
+            j["quartile"] if j["quartile"] is not None else "Q9",
             j["position"],
         ),
     )
@@ -274,7 +277,7 @@ def parse_uefiscdi_article_influence_score(
         key=lambda j: (
             j["index"],
             j["category"],
-            j["quartile"] if j["quartile"][0] == "Q" else "Q9",
+            j["quartile"] if j["quartile"] is not None else "Q9",
             j["position"],
         ),
     )
@@ -333,13 +336,15 @@ def _parse_ais_score_entries_2023(filename: pathlib.Path) -> list[ScoreEntry]:
         try:
             score = float(score.value)
         except ValueError:
-            score = -1
+            score = None
 
+        issn_clean = issn.value.strip().upper()
+        eissn_clean = eissn.value.strip().upper()
         results.append(
             ScoreEntry(
                 name=titlecase(journal.value),
-                issn=issn.value,
-                eissn=eissn.value,
+                issn=None if issn_clean == "N/A" else issn_clean,
+                eissn=None if eissn_clean == "N/A" else eissn_clean,
                 score=score,
             )
         )
