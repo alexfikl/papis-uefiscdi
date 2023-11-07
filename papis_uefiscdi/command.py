@@ -125,7 +125,7 @@ def parse_uefiscdi(
 @cli.command("update")
 @click.help_option("--help", "-h")
 @click.option("--database", type=click.Choice(list(UEFISCDI_SUPPORTED_DATABASES)))
-@papis.cli.option("--no-password", flag_value=True, default=False, is_flag=True)
+@click.option("--no-password", flag_value=True, default=False, is_flag=True)
 def update(database: str, no_password: str | None) -> None:
     config_dir = pathlib.Path(papis.config.get_config_folder())
 
