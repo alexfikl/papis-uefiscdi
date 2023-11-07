@@ -17,6 +17,14 @@ logger = papis.logging.get_logger(__name__)
 
 UEFISCDI_SUPPORTED_DATABASES = {"aisq", "jifq", "ais", "ris", "rif"}
 
+UEFISCDI_DATABASE_TO_KEY = {
+    "aisq": "uefiscdi_ais_quartile",
+    "jif": "uefiscdi_jif_quartile",
+    "ais": "uefiscdi_ais_score",
+    "ris": "uefiscdi_ris_score",
+    "rif": "uefiscdi_rif_score",
+}
+
 papis.config.register_default_settings(
     {
         "uefiscdi": {
@@ -34,6 +42,11 @@ papis.config.register_default_settings(
         }
     }
 )
+
+
+def get_uefiscdi_database_path(database: str) -> pathlib.Path | None:
+    config_dir = pathlib.Path(papis.config.get_config_folder())
+    return config_dir / "uefiscdi" / f"{database}.json"
 
 
 @click.group()
@@ -119,21 +132,18 @@ def parse_uefiscdi(
 @click.option("--no-password", flag_value=True, default=False, is_flag=True)
 def update(database: str, no_password: str | None) -> None:
     """Updated cached databases."""
-    config_dir = pathlib.Path(papis.config.get_config_folder())
-
-    uefiscdi_dir = config_dir / "uefiscdi"
-    if not uefiscdi_dir.exists():
-        uefiscdi_dir.mkdir()
-
     try:
         result = parse_uefiscdi(database, use_password=not no_password)
     except Exception as exc:
         logger.error("Could not parse UEFISCDI database '%s'", database, exc_info=exc)
         return
 
+    filename = get_uefiscdi_database_path(database)
+    if not filename.parent.exists():
+        filename.parent.mkdir()
+
     import json
 
-    filename = uefiscdi_dir / f"{database}.json"
     with open(filename, "w", encoding="utf-8") as outf:
         json.dump(result, outf, indent=2, sort_keys=False)
 
@@ -145,33 +155,86 @@ def update(database: str, no_password: str | None) -> None:
 # {{{
 
 
-def add_uefiscdi(doc: Document) -> None:
-    pass
+def find_uefiscdi(db: dict[str, Any], doc: Document, key: str) -> str | None:
+    journal = doc.get("journal")
+    if not journal:
+        return None
+
+    from difflib import SequenceMatcher
+
+    matches = [
+        entry
+        for entry in db["entries"]
+        if SequenceMatcher(None, journal, entry["name"]).ratio() > 0.9
+    ]
+    if not matches:
+        return None
+
+    if len(matches) == 1:
+        (match,) = matches
+    else:
+        # NOTE: this usually happens because the same journal is in multiple
+        # categories; not sure what the best choice is
+        logger.info(
+            "Found multiple matches: '%s'. Picking the first one!",
+            "', '".join(m["name"] for m in matches),
+        )
+        match = matches[0]
+
+    return str(match[key])
 
 
 @cli.command("add")
 @click.help_option("--help", "-h")
 @papis.cli.query_argument()
+@click.option("--database", type=click.Choice(list(UEFISCDI_SUPPORTED_DATABASES)))
 @papis.cli.doc_folder_option()
 @papis.cli.all_option()
 @papis.cli.sort_option()
 def add(
     query: str,
+    database: str,
     doc_folder: str | tuple[str, ...],
-    all_: bool,
+    _all: bool,
     sort_field: str | None,
     sort_reverse: bool,
 ) -> None:
     """Add various impact factors and scores to papis documents."""
-    from papis.api import save_doc
-
     documents = papis.cli.handle_doc_folder_query_all_sort(
-        query, doc_folder, sort_field, sort_reverse, all_  # type: ignore[arg-type]
+        query, doc_folder, sort_field, sort_reverse, _all  # type: ignore[arg-type]
     )
 
-    for doc in documents:
-        add_uefiscdi(doc)
-        save_doc(doc)
+    filename = get_uefiscdi_database_path(database)
+    if not filename.exists():
+        logger.error(
+            "Cache for database '%s' does not exist. Call 'papis uefiscdi update"
+            " --database %s' first to populate the cache!",
+            database,
+            database,
+        )
+        return
 
+    import json
+
+    with open(filename, encoding="utf-8") as inf:
+        db = json.load(inf)
+
+    from papis.api import save_doc
+
+    for doc in documents:
+        doc_key = UEFISCDI_DATABASE_TO_KEY[database]
+        entry_key = doc_key.split("_")[-1]
+        result = find_uefiscdi(db, doc, key=entry_key)
+        if not result:
+            continue
+
+        logger.info(
+            "Setting key '%s' to '%s': %s",
+            doc_key,
+            result,
+            papis.document.describe(doc),
+        )
+        doc[doc_key] = result
+        save_doc(doc)
 
 # }}}
