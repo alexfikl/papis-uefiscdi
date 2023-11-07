@@ -17,28 +17,19 @@ logger = papis.logging.get_logger(__name__)
 
 UEFISCDI_SUPPORTED_DATABASES = {"aisq", "jifq", "ais", "ris", "rif"}
 
-_DATABASE_TO_URL = {
-    "aisq": "ais-ranking-url",
-    "jifq": "jif-ranking-url",
-    "ais": "ais-score-url",
-    "rif": "rif-score-url",
-    "ris": "ris-score-url",
-}
-
-
 papis.config.register_default_settings(
     {
         "uefiscdi": {
             "version": 2023,
-            "ais-ranking-url": (
+            "aisq-url": (
                 "https://uefiscdi.gov.ro/resource-866007-zone.iunie.2023.ais.pdf"
             ),
-            "jif-ranking-url": (
+            "jifq-url": (
                 "https://uefiscdi.gov.ro/resource-866009-zone.iunie.2023.jif.pdf"
             ),
-            "ais-score-url": "https://uefiscdi.gov.ro/resource-863884-ais_2022.xlsx",
-            "rif-score-url": "https://uefiscdi.gov.ro/resource-863887-rif_2022.xlsx",
-            "ris-score-url": "https://uefiscdi.gov.ro/resource-863882-ris_2022.xlsx",
+            "ais-url": "https://uefiscdi.gov.ro/resource-863884-ais_2022.xlsx",
+            "rif-url": "https://uefiscdi.gov.ro/resource-863887-rif_2022.xlsx",
+            "ris-url": "https://uefiscdi.gov.ro/resource-863882-ris_2022.xlsx",
             "password": "uefiscdi",
         }
     }
@@ -67,11 +58,11 @@ def parse_uefiscdi(
     if version is None:
         raise ValueError("Could not determine database version")
 
-    if database not in _DATABASE_TO_URL:
+    if database not in UEFISCDI_SUPPORTED_DATABASES:
         raise ValueError(f"Unknown database '{database}'")
 
     if url is None:
-        url = papis.config.getstring(_DATABASE_TO_URL[database], section="uefiscdi")
+        url = papis.config.getstring(f"{database}-url", section="uefiscdi")
 
     from papis_uefiscdi.utils import download_document
 
@@ -127,6 +118,7 @@ def parse_uefiscdi(
 @click.option("--database", type=click.Choice(list(UEFISCDI_SUPPORTED_DATABASES)))
 @click.option("--no-password", flag_value=True, default=False, is_flag=True)
 def update(database: str, no_password: str | None) -> None:
+    """Updated cached databases."""
     config_dir = pathlib.Path(papis.config.get_config_folder())
 
     uefiscdi_dir = config_dir / "uefiscdi"
@@ -170,10 +162,11 @@ def add(
     sort_field: str | None,
     sort_reverse: bool,
 ) -> None:
+    """Add various impact factors and scores to papis documents."""
     from papis.api import save_doc
 
     documents = papis.cli.handle_doc_folder_query_all_sort(
-        query, doc_folder[0], sort_field, sort_reverse, all_
+        query, doc_folder[0], sort_field, sort_reverse, all_  # type: ignore
     )
 
     for doc in documents:
