@@ -20,9 +20,7 @@ fmt: format
 .PHONY: fmt
 
 black:			## Run black over the source code
-	$(PYTHON) -m black \
-		--safe --target-version py39 --preview \
-		papis_uefiscdi test
+	$(PYTHON) -m black papis_uefiscdi test
 	@echo -e "\e[1;32mblacked!\e[0m"
 .PHONY: black
 
@@ -31,13 +29,15 @@ isort:			## Run isort over the source code
 	@echo -e "\e[1;32misorted!\e[0m"
 .PHONY: isort
 
+lint: ruff mypy reuse codespell manifest	## Run all linting checks
+
 ruff:			## Run ruff checks over the source code
 	ruff check papis_uefiscdi test
 	@echo -e "\e[1;32mruff clean!\e[0m"
 .PHONY: ruff
 
 mypy:			## Run mypy checks over the source code
-	$(PYTHON) -m mypy --strict --show-error-codes papis_uefiscdi test
+	$(PYTHON) -m mypy papis_uefiscdi test
 	@echo -e "\e[1;32mmypy (strict) clean!\e[0m"
 .PHONY: mypy
 
@@ -52,6 +52,11 @@ reuse:			## Check REUSE license compliance
 	$(PYTHON) -m reuse lint
 	@echo -e "\e[1;32mREUSE compliant!\e[0m"
 .PHONY: reuse
+
+manifest:		## Update MANIFEST.in file
+	$(PYTHON) -m check_manifest
+	@echo -e "\e[1;32mMANIFEST.in is up to date!\e[0m"
+.PHONY: manifest
 
 # }}}
 

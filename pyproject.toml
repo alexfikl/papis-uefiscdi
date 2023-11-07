@@ -1,3 +1,10 @@
+[build-system]
+build-backend = "setuptools.build_meta"
+requires = [
+    "setuptools>=42",
+    "wheel",
+]
+
 [project]
 name = "papis-uefiscdi"
 version = "0.1.0"
@@ -38,6 +45,7 @@ dependencies = [
 [project.optional-dependencies]
 dev = [
     "black",
+    "check-manifest",
     "mypy",
     "pip-tools",
     "pytest",
@@ -59,23 +67,12 @@ packages = ["papis_uefiscdi"]
 [tool.setuptools.package-data]
 papis_uefiscdi = ["py.typed"]
 
-[build-system]
-build-backend = "setuptools.build_meta"
-requires = [
-    "setuptools>=42",
-    "wheel",
-]
-
 [tool.black]
+safe = true
+preview = true
 line-length = 88
 target-version = ['py39', 'py310', 'py311', 'py312']
 exclude='\.eggs|\.git|\.mypy_cache|build|dist|\.pytest_cache|\.pytype'
-
-[tool.isort]
-profile = "black"
-balanced_wrapping = true
-include_trailing_comma = true
-known_first_party = ["papis"]
 
 [tool.ruff]
 preview = true
@@ -104,6 +101,7 @@ ignore = [
     "E402",     # module-import-not-at-top-of-file
     "FBT001",   # boolean
     "I001",     # unsorted-imports
+    "PLC0415",  # import-outside-top-level
     "PLR0911",  # too-many-return-statements
     "PLR0912",  # too-many-branches
     "PLR0913",  # too-many-arguments
@@ -120,7 +118,16 @@ docstring-quotes = "double"
 inline-quotes = "double"
 multiline-quotes = "double"
 
+[tool.isort]
+profile = "black"
+balanced_wrapping = true
+include_trailing_comma = true
+known_first_party = ["papis"]
+
 [tool.mypy]
+strict = true
+hide_error_codes = false
+warn_unused_ignores = true
 
 [[tool.mypy.overrides]]
 module = [
@@ -129,3 +136,10 @@ module = [
     "msoffcrypto.*",
 ]
 ignore_missing_imports = true
+
+[tool.check-manifest]
+ignore = [
+    "*.yml",
+    "*.yaml",
+    ".ci/*",
+]
