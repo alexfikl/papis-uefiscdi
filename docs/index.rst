@@ -56,6 +56,14 @@ Examples
 
       papis uefiscdi --database ais --overwrite <QUERY>
 
+* To explore the various databases, use
+
+  .. code:: sh
+
+      papis explore uefiscdi --database ais <JOURNAL>
+
+  which allows searching for journal names.
+
 Configuration Options
 ---------------------
 
