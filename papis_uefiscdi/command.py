@@ -142,7 +142,7 @@ def find_uefiscdi(
         matches = [
             entry
             for name, entry in db.items()
-            if SequenceMatcher(None, journal, name).ratio() > 0.9
+            if SequenceMatcher(None, journal, name).ratio() > 0.8
         ]
 
     if not matches:
@@ -152,7 +152,7 @@ def find_uefiscdi(
         (match,) = matches
     elif batch:
         # NOTE: this usually happens because the same journal is in multiple
-        # categories; not sure what the best choice is
+        # categories; should use interactive mode for better options
         logger.info(
             "Found multiple matches: '%s'. Picking the first one!",
             "', '".join(m["name"] for m in matches),
