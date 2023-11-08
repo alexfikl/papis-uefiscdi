@@ -15,7 +15,15 @@ from papis.document import Document
 
 logger = papis.logging.get_logger(__name__)
 
-UEFISCDI_SUPPORTED_DATABASES = {"aisq", "jifq", "ais", "ris", "rif"}
+# {{{ utils
+
+UEFISCDI_SUPPORTED_DATABASES = {
+    "aisq": "Article Influence Score (Quartiles)",
+    "jifq": "Journal Impact Factor (Quartiles)",
+    "ais": "Article Influence Score (Scores)",
+    "ris": "Relative Influence Score (Scores)",
+    "rif": "Relative Impact Factor (Scores)",
+}
 
 UEFISCDI_DATABASE_TO_KEY = {
     "aisq": "uefiscdi_ais_quartile",
@@ -47,15 +55,6 @@ papis.config.register_default_settings(
 def get_uefiscdi_database_path(database: str) -> pathlib.Path:
     config_dir = pathlib.Path(papis.config.get_config_folder())
     return config_dir / "uefiscdi" / f"{database}.json"
-
-
-@click.group()
-@click.help_option("--help", "-h")
-def cli() -> None:
-    """Manage UEFISCDI journal impact factors and other indicators."""
-
-
-# {{{ update
 
 
 def parse_uefiscdi(
@@ -126,35 +125,6 @@ def parse_uefiscdi(
     return {"version": version, "url": url, "entries": entries}
 
 
-@cli.command("update")
-@click.help_option("--help", "-h")
-@click.option("--database", type=click.Choice(list(UEFISCDI_SUPPORTED_DATABASES)))
-@click.option("--no-password", flag_value=True, default=False, is_flag=True)
-def update(database: str, no_password: str | None) -> None:
-    """Updated cached databases."""
-    try:
-        result = parse_uefiscdi(database, use_password=not no_password)
-    except Exception as exc:
-        logger.error("Could not parse UEFISCDI database '%s'", database, exc_info=exc)
-        return
-
-    filename = get_uefiscdi_database_path(database)
-    if not filename.parent.exists():
-        filename.parent.mkdir()
-
-    import json
-
-    with open(filename, "w", encoding="utf-8") as outf:
-        json.dump(result, outf, indent=2, sort_keys=False)
-
-    logger.info("Database saved in '%s'.", filename)
-
-
-# }}}
-
-# {{{
-
-
 def find_uefiscdi(db: dict[str, Any], doc: Document, key: str) -> str | None:
     journal = doc.get("journal")
     if not journal:
@@ -188,41 +158,92 @@ def find_uefiscdi(db: dict[str, Any], doc: Document, key: str) -> str | None:
     return str(match[key])
 
 
-@cli.command("add")
+# }}}
+
+
+@click.command("uefiscdi")
 @click.help_option("--help", "-h")
 @papis.cli.query_argument()
-@click.option("--database", type=click.Choice(list(UEFISCDI_SUPPORTED_DATABASES)))
+@click.option(
+    "--database",
+    type=click.Choice(list(UEFISCDI_SUPPORTED_DATABASES)),
+    help="Add quartiles or scores from the database",
+)
 @papis.cli.doc_folder_option()
 @papis.cli.all_option()
 @papis.cli.sort_option()
-def add(
+@click.option(
+    "--no-password",
+    flag_value=True,
+    default=False,
+    is_flag=True,
+    help="Do not attempt do descrypt remote file before parsing",
+)
+@click.option(
+    "--overwrite",
+    flag_value=True,
+    default=False,
+    is_flag=True,
+    help="Overwrite existing UEFISCDI databases",
+)
+@click.option(
+    "--list-databases",
+    "list_databases",
+    flag_value=True,
+    default=False,
+    is_flag=True,
+    help="List all known databases and their descriptions",
+)
+def cli(
     query: str,
     database: str,
     doc_folder: str | tuple[str, ...],
     _all: bool,
     sort_field: str | None,
     sort_reverse: bool,
+    no_password: bool,
+    overwrite: bool,
+    list_databases: bool,
 ) -> None:
-    """Add various impact factors and scores to papis documents."""
-    documents = papis.cli.handle_doc_folder_query_all_sort(
-        query, doc_folder, sort_field, sort_reverse, _all  # type: ignore[arg-type]
-    )
+    """Manage UEFISCDI journal impact factors and other indicators."""
+    if list_databases:
+        import colorama
 
-    filename = get_uefiscdi_database_path(database)
-    if not filename.exists():
-        logger.error(
-            "Cache for database '%s' does not exist. Call 'papis uefiscdi update"
-            " --database %s' first to populate the cache!",
-            database,
-            database,
-        )
+        for did, description in UEFISCDI_SUPPORTED_DATABASES.items():
+            click.echo(f"{colorama.Style.BRIGHT}{did}{colorama.Style.RESET_ALL}")
+            click.echo(f"    {description}")
+
         return
 
     import json
 
-    with open(filename, encoding="utf-8") as inf:
-        db = json.load(inf)
-        journal_to_entry = {entry["name"].lower(): entry for entry in db["entries"]}
+    filename = get_uefiscdi_database_path(database)
+    if not filename.exists() or overwrite:
+        try:
+            db = parse_uefiscdi(database, use_password=not no_password)
+        except Exception as exc:
+            logger.error(
+                "Could not parse UEFISCDI database '%s'", database, exc_info=exc
+            )
+            return
+
+        if not filename.parent.exists():
+            filename.parent.mkdir()
+
+        with open(filename, "w", encoding="utf-8") as outf:
+            json.dump(db, outf, indent=2, sort_keys=False)
+
+        logger.info("Database saved in '%s'.", filename)
+    else:
+        logger.info("Database loaded from '%s'.", filename)
+
+        with open(filename, encoding="utf-8") as inf:
+            db = json.load(inf)
+
+    journal_to_entry = {entry["name"].lower(): entry for entry in db["entries"]}
+    documents = papis.cli.handle_doc_folder_query_all_sort(
+        query, doc_folder, sort_field, sort_reverse, _all  # type: ignore[arg-type]
+    )
 
     from papis.api import save_doc
 
