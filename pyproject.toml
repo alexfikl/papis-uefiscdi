@@ -136,6 +136,7 @@ warn_unused_ignores = true
 
 [[tool.mypy.overrides]]
 module = [
+    "colorama.*",
     "pyperclip.*",
     "titlecase.*",
     "msoffcrypto.*",

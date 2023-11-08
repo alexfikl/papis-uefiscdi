@@ -21,29 +21,42 @@ and easy to manipulate format (e.g. CSV). The plugin supports obtaining:
 
 The `papis <https://github.com/papis/papis>`__ plugin that comes with it allows
 for easy management of the data and adding it to existing documents in a Papis
-database. For example, to download the latest data
+database. For example, add AIS scores to documents, use
 
-.. code::
+.. code:: sh
 
-    papis uefiscdi update --from jif [url]
-
-which can then be added to existing documents using
-
-.. code::
-
-    papis uefiscdi add --from jif [QUERY]
+    papis uefiscdi --database jif <QUERY>
 
 This command will match the journal of each document in the query against those
 in the JIF database and add appropriate fields to the document. If an ISSN or
-an eISSN is available in the document, those will take priority.
+an eISSN is available in the document, those will take priority. To see a list
+of all databases, run
 
-Furthermore, to query the databases themselves, the following command can be used
+.. code:: sh
 
-.. code::
-
-    papis uefiscdi explore [QUERY]
+   papis uefiscdi --list-databases
 
 Configuration options
 =====================
 
-TODO
+This command uses the ``uefiscdi`` section for its configuration options. Then
+possible settings are
+
+* ``version`` (default ``2023``): The year the database was published. This mainly
+  affects what parsing is used, as the various documents are not compatible.
+* ``password`` (default ``uefiscdi``): Password used for known files, e.g. ``ais``.
+* ``aisq-url``: URL to the file containing the AIS quartile data.
+* ``jifq-url``: URL to the file containing the JIF quartile data.
+* ``ais-url``: URL to the file containing the AIS score data.
+* ``rif-url``: URL to the file containing the RIF score data.
+* ``ris-url``: URL to the file containing the RIS score data.
+
+Examples URLs are given above, but they will need to be updated as new versions
+are released. We strive to keep the latest values as defaults, but this may not
+be always possible.
+
+LICENSE
+=======
+
+The library is licensed under GPL-3.0-or-later because it contains functionality
+from ``papis``, but any new functionality is licensed under the MIT license.
