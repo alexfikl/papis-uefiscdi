@@ -11,6 +11,7 @@ import click
 import papis.cli
 import papis.config
 import papis.logging
+import papis.strings
 from papis.document import Document
 
 logger = papis.logging.get_logger(__name__)
@@ -125,7 +126,9 @@ def parse_uefiscdi(
     return {"version": version, "url": url, "entries": entries}
 
 
-def find_uefiscdi(db: dict[str, Any], doc: Document, key: str) -> str | None:
+def find_uefiscdi(
+    db: dict[str, Any], doc: Document, key: str, *, batch: bool = True
+) -> str | None:
     journal = doc.get("journal")
     if not journal:
         return None
@@ -134,19 +137,20 @@ def find_uefiscdi(db: dict[str, Any], doc: Document, key: str) -> str | None:
 
     journal = journal.lower()
     if journal in db:
-        return str(db[journal][key])
+        matches = db[journal]
+    else:
+        matches = [
+            entry
+            for name, entry in db.items()
+            if SequenceMatcher(None, journal, name).ratio() > 0.9
+        ]
 
-    matches = [
-        entry
-        for name, entry in db.items()
-        if SequenceMatcher(None, journal, name).ratio() > 0.9
-    ]
     if not matches:
         return None
 
     if len(matches) == 1:
         (match,) = matches
-    else:
+    elif batch:
         # NOTE: this usually happens because the same journal is in multiple
         # categories; not sure what the best choice is
         logger.info(
@@ -154,6 +158,23 @@ def find_uefiscdi(db: dict[str, Any], doc: Document, key: str) -> str | None:
             "', '".join(m["name"] for m in matches),
         )
         match = matches[0]
+    else:
+        from papis.tui.utils import select_range
+
+        indices: list[int] = []
+        while len(indices) != 1:
+            indices = select_range(
+                [
+                    f"{match['name']} ({match.get('category', 'unknown')})"
+                    for match in matches
+                ],
+                "Select matching journal",
+            )
+
+            if len(indices) != 1:
+                logger.error("Can only select a single journal")
+
+        match = matches[indices[0]]
 
     return str(match[key])
 
@@ -187,6 +208,13 @@ def find_uefiscdi(db: dict[str, Any], doc: Document, key: str) -> str | None:
     help="Overwrite existing UEFISCDI databases",
 )
 @click.option(
+    "--batch",
+    flag_value=True,
+    default=False,
+    is_flag=True,
+    help="Run in batch mode (no interactive prompts)",
+)
+@click.option(
     "--list-databases",
     "list_databases",
     flag_value=True,
@@ -203,6 +231,7 @@ def cli(
     sort_reverse: bool,
     no_password: bool,
     overwrite: bool,
+    batch: bool,
     list_databases: bool,
 ) -> None:
     """Manage UEFISCDI journal impact factors and other indicators."""
@@ -213,6 +242,14 @@ def cli(
             click.echo(f"{colorama.Style.BRIGHT}{did}{colorama.Style.RESET_ALL}")
             click.echo(f"    {description}")
 
+        return
+
+    documents = papis.cli.handle_doc_folder_query_all_sort(
+        query, doc_folder, sort_field, sort_reverse, _all  # type: ignore[arg-type]
+    )
+
+    if not documents:
+        logger.warning(papis.strings.no_documents_retrieved_message)
         return
 
     import json
@@ -240,17 +277,18 @@ def cli(
         with open(filename, encoding="utf-8") as inf:
             db = json.load(inf)
 
-    journal_to_entry = {entry["name"].lower(): entry for entry in db["entries"]}
-    documents = papis.cli.handle_doc_folder_query_all_sort(
-        query, doc_folder, sort_field, sort_reverse, _all  # type: ignore[arg-type]
-    )
+    from collections import defaultdict
+
+    journal_to_entry = defaultdict(list)
+    for entry in db["entries"]:
+        journal_to_entry[entry["name"].lower()].append(entry)
 
     from papis.api import save_doc
 
     for doc in documents:
         doc_key = UEFISCDI_DATABASE_TO_KEY[database]
         entry_key = doc_key.split("_")[-1]
-        result = find_uefiscdi(journal_to_entry, doc, key=entry_key)
+        result = find_uefiscdi(journal_to_entry, doc, key=entry_key, batch=batch)
         if not result:
             continue
 
