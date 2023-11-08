@@ -36,6 +36,17 @@ of all databases, run
 
    papis uefiscdi --list-databases
 
+The databases can also be explored a bit using
+
+.. code:: sh
+
+   papis explore uefiscdi --database ais <JOURNAL>
+
+but it's probably best to use the library functions, e.g.
+:func:`parse_uefiscdi_journal_impact_factor`, to write a CSV file and explore
+the data using a spreadsheet application (`visidata <https://github.com/saulpw/visidata>`__
+is very nice for this).
+
 Configuration options
 =====================
 

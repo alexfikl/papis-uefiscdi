@@ -10,6 +10,7 @@ import click
 
 import papis.cli
 import papis.config
+import papis.document
 import papis.logging
 import papis.strings
 from papis.document import Document
@@ -56,6 +57,37 @@ papis.config.register_default_settings(
 def get_uefiscdi_database_path(database: str) -> pathlib.Path:
     config_dir = pathlib.Path(papis.config.get_config_folder())
     return config_dir / "uefiscdi" / f"{database}.json"
+
+
+def get_uefiscdi_database(
+    database: str, *, overwrite: bool = False, use_password: bool = False
+) -> dict[str, Any]:
+    import json
+
+    filename = get_uefiscdi_database_path(database)
+    if not filename.exists() or overwrite:
+        try:
+            db = parse_uefiscdi(database, use_password=use_password)
+        except Exception as exc:
+            logger.error(
+                "Could not parse UEFISCDI database '%s'", database, exc_info=exc
+            )
+            return {}
+
+        if not filename.parent.exists():
+            filename.parent.mkdir()
+
+        with open(filename, "w", encoding="utf-8") as outf:
+            json.dump(db, outf, indent=2, sort_keys=False)
+
+        logger.info("Database saved in '%s'.", filename)
+    else:
+        logger.info("Database loaded from '%s'.", filename)
+
+        with open(filename, encoding="utf-8") as inf:
+            db = json.load(inf)
+
+    return db
 
 
 def parse_uefiscdi(
@@ -182,6 +214,9 @@ def find_uefiscdi(
 # }}}
 
 
+# {{{ command
+
+
 @click.command("uefiscdi")
 @click.help_option("--help", "-h")
 @papis.cli.query_argument()
@@ -252,33 +287,11 @@ def cli(
         logger.warning(papis.strings.no_documents_retrieved_message)
         return
 
-    import json
-
-    filename = get_uefiscdi_database_path(database)
-    if not filename.exists() or overwrite:
-        try:
-            db = parse_uefiscdi(database, use_password=not no_password)
-        except Exception as exc:
-            logger.error(
-                "Could not parse UEFISCDI database '%s'", database, exc_info=exc
-            )
-            return
-
-        if not filename.parent.exists():
-            filename.parent.mkdir()
-
-        with open(filename, "w", encoding="utf-8") as outf:
-            json.dump(db, outf, indent=2, sort_keys=False)
-
-        logger.info("Database saved in '%s'.", filename)
-    else:
-        logger.info("Database loaded from '%s'.", filename)
-
-        with open(filename, encoding="utf-8") as inf:
-            db = json.load(inf)
-
     from collections import defaultdict
 
+    db = get_uefiscdi_database(
+        database, overwrite=overwrite, use_password=not no_password
+    )
     journal_to_entry = defaultdict(list)
     for entry in db["entries"]:
         journal_to_entry[entry["name"].lower()].append(entry)
@@ -300,6 +313,69 @@ def cli(
         )
         doc[doc_key] = result
         save_doc(doc)
+
+
+# }}}
+
+
+# {{{ explorer
+
+
+def entry_to_papis(entry: dict[str, Any], version: int) -> papis.document.Document:
+    # NOTE: this is essentially constructed so that it looks nice with the default
+    # picker header format used by papis at the moment, but it should look ok
+    # with other pickers as well
+
+    return papis.document.from_data(
+        {
+            "title": "{} ({})".format(
+                entry["name"], entry.get("issn") or entry.get("eissn")
+            ),
+            "author": "Category: {} / Index: {}".format(
+                entry.get("category", "unknown"), entry.get("index", "unknown")
+            ),
+            "year": version,
+            "tags": (
+                "Quartile: {}".format(entry["quartile"])
+                if "quartile" in entry
+                else "Score: {}".format(entry["score"])
+            ),
+        }
+    )
+
+
+@click.command("uefiscdi")
+@click.pass_context
+@click.help_option("--help", "-h")
+@click.option("--query", "-q", default="")
+@click.option(
+    "--database",
+    type=click.Choice(list(UEFISCDI_SUPPORTED_DATABASES)),
+    default="jifq",
+    help="Add quartiles or scores from the database",
+)
+def explorer(ctx: click.core.Context, query: str, database: str) -> None:
+    from difflib import SequenceMatcher
+
+    query = query.lower()
+
+    def match(journal: str) -> bool:
+        if not query:
+            return True
+
+        journal = journal.lower()
+        if query in journal:
+            return True
+
+        return SequenceMatcher(None, query, journal).ratio() > 0.8
+
+    db = get_uefiscdi_database(database)
+    matches = [entry for entry in db["entries"] if match(entry["name"])]
+    logger.info("Found %s documents.", len(matches))
+
+    ctx.obj["documents"] += [
+        entry_to_papis(match, version=db["version"]) for match in matches
+    ]
 
 
 # }}}

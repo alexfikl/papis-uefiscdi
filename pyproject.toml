@@ -65,6 +65,8 @@ docs = [
 Repository = "https://github.com/alexfikl/papis-uefiscdi"
 [project.entry-points."papis.command"]
 uefiscdi = "papis_uefiscdi.command:cli"
+[project.entry-points."papis.explorer"]
+uefiscdi = "papis_uefiscdi.command:explorer"
 
 [tool.setuptools]
 packages = ["papis_uefiscdi"]

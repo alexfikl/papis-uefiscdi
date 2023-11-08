@@ -1,6 +1,3 @@
-# SPDX-FileCopyrightText: 2023 Alexandru Fikl <alexfikl@gmail.com>
-# SPDX-License-Identifier: MIT
-
 import os
 import sys
 

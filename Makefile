@@ -29,7 +29,7 @@ isort:			## Run isort over the source code
 	@echo -e "\e[1;32misorted!\e[0m"
 .PHONY: isort
 
-lint: ruff mypy reuse codespell manifest	## Run all linting checks
+lint: ruff reuse codespell manifest mypy	## Run all linting checks
 
 ruff:			## Run ruff checks over the source code
 	ruff check papis_uefiscdi test
