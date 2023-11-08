@@ -162,10 +162,14 @@ def find_uefiscdi(db: dict[str, Any], doc: Document, key: str) -> str | None:
 
     from difflib import SequenceMatcher
 
+    journal = journal.lower()
+    if journal in db:
+        return str(db[journal][key])
+
     matches = [
         entry
-        for entry in db["entries"]
-        if SequenceMatcher(None, journal, entry["name"]).ratio() > 0.9
+        for name, entry in db.items()
+        if SequenceMatcher(None, journal, name).ratio() > 0.9
     ]
     if not matches:
         return None
@@ -218,21 +222,22 @@ def add(
 
     with open(filename, encoding="utf-8") as inf:
         db = json.load(inf)
+        journal_to_entry = {entry["name"].lower(): entry for entry in db["entries"]}
 
     from papis.api import save_doc
 
     for doc in documents:
         doc_key = UEFISCDI_DATABASE_TO_KEY[database]
         entry_key = doc_key.split("_")[-1]
-        result = find_uefiscdi(db, doc, key=entry_key)
+        result = find_uefiscdi(journal_to_entry, doc, key=entry_key)
         if not result:
             continue
 
         logger.info(
-            "Setting key '%s' to '%s': %s",
+            "Setting key '%s' to '%s' (journal '%s').",
             doc_key,
             result,
-            papis.document.describe(doc),
+            doc["journal"],
         )
         doc[doc_key] = result
         save_doc(doc)
