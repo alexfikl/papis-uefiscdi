@@ -131,6 +131,13 @@ balanced_wrapping = true
 include_trailing_comma = true
 known_first_party = ["papis"]
 
+[tool.check-manifest]
+ignore = [
+    "*.yml",
+    "*.yaml",
+    ".ci/*",
+]
+
 [tool.mypy]
 strict = true
 hide_error_codes = false
@@ -144,10 +151,3 @@ module = [
     "msoffcrypto.*",
 ]
 ignore_missing_imports = true
-
-[tool.check-manifest]
-ignore = [
-    "*.yml",
-    "*.yaml",
-    ".ci/*",
-]

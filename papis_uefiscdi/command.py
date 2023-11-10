@@ -159,7 +159,7 @@ def parse_uefiscdi(
 
 
 def find_uefiscdi(
-    db: dict[str, Any], doc: Document, key: str, *, batch: bool = True
+    database: str, db: dict[str, Any], doc: Document, key: str, *, batch: bool = True
 ) -> str | None:
     journal = doc.get("journal")
     if not journal:
@@ -192,14 +192,12 @@ def find_uefiscdi(
         match = matches[0]
     else:
         from papis.tui.utils import select_range
+        from papis_uefiscdi.uefiscdi import stringify
 
         indices: list[int] = []
         while len(indices) != 1:
             indices = select_range(
-                [
-                    f"{match['name']} ({match.get('category', 'unknown')})"
-                    for match in matches
-                ],
+                [stringify(match, database) for match in matches],
                 "Select matching journal",
             )
 
@@ -301,7 +299,7 @@ def cli(
     for doc in documents:
         doc_key = UEFISCDI_DATABASE_TO_KEY[database]
         entry_key = doc_key.split("_")[-1]
-        result = find_uefiscdi(journal_to_entry, doc, key=entry_key, batch=batch)
+        result = find_uefiscdi(database, journal_to_entry, doc, entry_key, batch=batch)
         if not result:
             continue
 
