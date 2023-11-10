@@ -155,11 +155,17 @@ def parse_uefiscdi(
     else:
         raise ValueError(f"Unknown database name: '{database}'")
 
-    return {"version": version, "url": url, "entries": entries}
+    return {"id": database, "version": version, "url": url, "entries": entries}
 
 
 def find_uefiscdi(
-    database: str, db: dict[str, Any], doc: Document, key: str, *, batch: bool = True
+    database: str,
+    db: dict[str, Any],
+    doc: Document,
+    key: str,
+    *,
+    accuracy: float = 0.8,
+    batch: bool = True,
 ) -> str | None:
     journal = doc.get("journal")
     if not journal:
@@ -174,7 +180,7 @@ def find_uefiscdi(
         matches = [
             entry
             for name, entry in db.items()
-            if SequenceMatcher(None, journal, name).ratio() > 0.8
+            if SequenceMatcher(None, journal, name).ratio() > accuracy
         ]
 
     if not matches:
@@ -223,6 +229,12 @@ def find_uefiscdi(
     type=click.Choice(list(UEFISCDI_SUPPORTED_DATABASES)),
     help="Add quartiles or scores from the database",
 )
+@click.option(
+    "--accuracy",
+    type=float,
+    default=0.8,
+    help="A number between in (0, 1) for accuracy in matching journal names",
+)
 @papis.cli.doc_folder_option()
 @papis.cli.all_option()
 @papis.cli.sort_option()
@@ -258,6 +270,7 @@ def find_uefiscdi(
 def cli(
     query: str,
     database: str,
+    accuracy: float,
     doc_folder: str | tuple[str, ...],
     _all: bool,
     sort_field: str | None,
@@ -299,7 +312,14 @@ def cli(
     for doc in documents:
         doc_key = UEFISCDI_DATABASE_TO_KEY[database]
         entry_key = doc_key.split("_")[-1]
-        result = find_uefiscdi(database, journal_to_entry, doc, entry_key, batch=batch)
+        result = find_uefiscdi(
+            database,
+            journal_to_entry,
+            doc,
+            entry_key,
+            accuracy=accuracy,
+            batch=batch,
+        )
         if not result:
             continue
 
@@ -352,7 +372,15 @@ def entry_to_papis(entry: dict[str, Any], version: int) -> papis.document.Docume
     default="jifq",
     help="Add quartiles or scores from the database",
 )
-def explorer(ctx: click.core.Context, query: str, database: str) -> None:
+@click.option(
+    "--accuracy",
+    type=float,
+    default=0.8,
+    help="A number between in (0, 1) for accuracy in matching journal names",
+)
+def explorer(
+    ctx: click.core.Context, query: str, database: str, accuracy: float
+) -> None:
     from difflib import SequenceMatcher
 
     query = query.lower()
@@ -365,7 +393,7 @@ def explorer(ctx: click.core.Context, query: str, database: str) -> None:
         if query in journal:
             return True
 
-        return SequenceMatcher(None, query, journal).ratio() > 0.8
+        return SequenceMatcher(None, query, journal).ratio() > accuracy
 
     db = get_uefiscdi_database(database)
     matches = [entry for entry in db["entries"] if match(entry["name"])]
