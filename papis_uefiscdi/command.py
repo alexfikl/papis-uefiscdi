@@ -29,7 +29,7 @@ UEFISCDI_SUPPORTED_DATABASES = {
 
 UEFISCDI_DATABASE_TO_KEY = {
     "aisq": "uefiscdi_ais_quartile",
-    "jif": "uefiscdi_jif_quartile",
+    "jifq": "uefiscdi_jif_quartile",
     "ais": "uefiscdi_ais_score",
     "ris": "uefiscdi_ris_score",
     "rif": "uefiscdi_rif_score",
