@@ -23,19 +23,18 @@ INDEX_ID_TO_NAME = {
 }
 
 
-class ZoneEntry(TypedDict):
+class Entry(TypedDict):
     """Journal entry information from the UEFISCDI databases.
 
     This entry corresponds to the Web of Science Core Collection data for
     Journal Impact Factors (JIF) and Article Influence Scores (AIS) gathered
-    by the UEFISCDI. These entries are distinguished based on their quartile,
-    referred to as zones in the UEFISCDI nomenclature.
+    by the UEFISCDI.
     """
 
     #: Web of Science category for this journal.
-    category: str
+    category: str | None
     #: Citation index identifier (see :data:`INDEX_ID_TO_NAME`).
-    index: str
+    index: str | None
 
     #: Name of the journal in the provided format.
     name: str | None
@@ -47,26 +46,25 @@ class ZoneEntry(TypedDict):
     quartile: str | None
     #: Position in its quartile based on the Journal Impact factor (JIF)
     #: or the Article Influence Score (AIS).
-    position: int
-
-
-class ScoreEntry(TypedDict):
-    """Journal entry information from the UEFISCDI databases.
-
-    This entry corresponds to the Journal Citation Report (JCR) indicators that
-    are published by the UEFISCDI. These entries are distinguished based on their
-    score.
-    """
-
-    #: Name of the journal.
-    name: str
-    #: International Standard Serial Number (ISSN) assigned to the journal.
-    issn: str | None
-    #: Electronic ISSN assigned to the journal.
-    eissn: str | None
-
-    #: Numerical score as a floating point number.
+    position: int | None
+    #: Numerical score of the journal
     score: float | None
+
+
+def stringify(entry: Entry, database: str) -> str:
+    name = entry["name"]
+    category = entry["category"] or "unknown category"
+
+    score = entry["score"]
+    quartile = entry["quartile"]
+    if score is not None:
+        value = str(score)
+    elif quartile is not None:
+        value = str(quartile)
+    else:
+        value = "N/A"
+
+    return f"[{database.upper()} {value}] {name} ({category})"
 
 
 # }}}
@@ -86,9 +84,7 @@ def window(iterable: list[str]) -> Iterator[tuple[tuple[str, str], str]]:
         yield (iterable[i], iterable[i + 1]), x
 
 
-def _parse_jif_zone_entry_2023(
-    before: tuple[str, str], current: str
-) -> ZoneEntry | None:
+def _parse_jif_zone_entry_2023(before: tuple[str, str], current: str) -> Entry | None:
     """Row format is given as
 
         WOS_CATEGORY - INDEX | JOURNAL | ISSN | EISSN | QUARTILE | POSITION
@@ -145,7 +141,7 @@ def _parse_jif_zone_entry_2023(
 
     from titlecase import titlecase
 
-    return ZoneEntry(
+    return Entry(
         category=titlecase(category.strip()),
         index=index.upper(),
         name=titlecase(journal.strip()),
@@ -153,12 +149,13 @@ def _parse_jif_zone_entry_2023(
         eissn=None if eissn == "N/A" else eissn,
         quartile=None if quartile == "N/A" else quartile,
         position=int(position),
+        score=None,
     )
 
 
 def parse_uefiscdi_journal_impact_factor(
     filename: str | pathlib.Path, *, version: int = 2023
-) -> list[ZoneEntry]:
+) -> list[Entry]:
     """Parse Journal Impact Factor (JIF) ranking data from the given filename.
 
     Some versions of the UEFISCDI database are given in PDF format. Table
@@ -185,7 +182,7 @@ def parse_uefiscdi_journal_impact_factor(
         else:
             raise AssertionError
 
-        results: list[ZoneEntry] = []
+        results: list[Entry] = []
         for i, p in enumerate(pdf.pages):
             lines = [line.strip() for line in p.extract_text().split("\n")]
 
@@ -225,7 +222,7 @@ _parse_ais_zone_entry_2023 = _parse_jif_zone_entry_2023
 
 def parse_uefiscdi_article_influence_score(
     filename: str | pathlib.Path, *, version: int = 2023
-) -> list[ZoneEntry]:
+) -> list[Entry]:
     """Parse Article Influence Score (AIS) ranking data from the given filename.
 
     Some versions of the UEFISCDI database are given in PDF format. Table
@@ -252,7 +249,7 @@ def parse_uefiscdi_article_influence_score(
         else:
             raise AssertionError
 
-        results: list[ZoneEntry] = []
+        results: list[Entry] = []
         for i, p in enumerate(pdf.pages):
             lines = [line.strip() for line in p.extract_text().split("\n")]
 
@@ -306,7 +303,7 @@ def _decrypt_file(filename: pathlib.Path, password: str) -> pathlib.Path:
         return filename
 
 
-def _parse_ais_score_entries_2023(filename: pathlib.Path) -> list[ScoreEntry]:
+def _parse_ais_score_entries_2023(filename: pathlib.Path) -> list[Entry]:
     import openpyxl
 
     wb = openpyxl.load_workbook(filename, read_only=True)
@@ -319,14 +316,20 @@ def _parse_ais_score_entries_2023(filename: pathlib.Path) -> list[ScoreEntry]:
 
     from titlecase import titlecase
 
-    results: list[ScoreEntry] = []
+    results: list[Entry] = []
     for row in rows:
         if len(row) == 4:
             # NOTE: RIS and RIF entries have 4 columns
             journal, issn, eissn, score = row
+            category = index = quartile = None
         elif len(row) == 6:
             # NOTE: AIS has 6 columns
-            journal, issn, eissn, _, score, _ = row
+            journal, issn, eissn, category_index, score, quartile = row
+
+            category, index = str(category_index.value).split(" - ")
+            category = titlecase(category.strip())
+            index = index.strip().upper()
+            quartile = None if (q := str(quartile.value).upper()) == "N/A" else q
         else:
             continue
 
@@ -342,11 +345,15 @@ def _parse_ais_score_entries_2023(filename: pathlib.Path) -> list[ScoreEntry]:
         eissn_clean = str(eissn.value).strip().upper()
 
         results.append(
-            ScoreEntry(
+            Entry(
+                category=category,
+                index=index,
                 name=titlecase(journal.value),
                 # NOTE: all ISSNs are of the form XXXX-XXX, so we ignore others
                 issn=None if len(issn_clean) != 9 else issn_clean,
                 eissn=None if len(eissn_clean) != 9 else eissn_clean,
+                quartile=quartile,
+                position=None,
                 score=score,
             )
         )
@@ -359,7 +366,7 @@ def parse_uefiscdi_article_influence_scores(
     *,
     version: int = 2023,
     password: str | None = "uefiscdi",  # noqa: S107
-) -> list[ScoreEntry]:
+) -> list[Entry]:
     """Parse Article Influence Score (AIS) data from the given filename.
 
     This data is usually given in the XLSX Excel format and can be easily
@@ -396,7 +403,7 @@ def parse_uefiscdi_relative_influence_scores(
     *,
     version: int = 2023,
     password: str | None = None,
-) -> list[ScoreEntry]:
+) -> list[Entry]:
     """Parse Relative Influence Score (RIS) data from the given filename.
 
     This data is usually given in the XLSX Excel format and can be easily
@@ -433,7 +440,7 @@ def parse_uefiscdi_relative_impact_factors(
     *,
     version: int = 2023,
     password: str | None = None,
-) -> list[ScoreEntry]:
+) -> list[Entry]:
     """Parse Relative Impact Factor (RIF) data from the given filename.
 
     This data is usually given in the XLSX Excel format and can be easily
