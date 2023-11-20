@@ -391,6 +391,17 @@ def explorer(
     min_score: float,
     accuracy: float,
 ) -> None:
+    """
+    Explore local UEFISCDI databases.
+
+    For example, to look at the Article Influence Scores of the Proceedings
+    of the Royal Society, you can call::
+
+        papis explore \\
+            uefiscdi --database ais -q "proceedings royal" \\
+            pick \\
+            cmd 'echo doc[journal]'
+    """
     from difflib import SequenceMatcher
 
     query = query.lower()
