@@ -60,14 +60,14 @@ def get_uefiscdi_database_path(database: str) -> pathlib.Path:
 
 
 def get_uefiscdi_database(
-    database: str, *, overwrite: bool = False, use_password: bool = False
+    database: str, *, overwrite: bool = False, password: str | None = None
 ) -> dict[str, Any]:
     import json
 
     filename = get_uefiscdi_database_path(database)
     if not filename.exists() or overwrite:
         try:
-            db = parse_uefiscdi(database, use_password=use_password)
+            db = parse_uefiscdi(database, password=password)
         except Exception as exc:
             logger.error(
                 "Could not parse UEFISCDI database '%s'", database, exc_info=exc
@@ -95,7 +95,7 @@ def parse_uefiscdi(
     url: str | None = None,
     *,
     version: int | None = None,
-    use_password: bool = True,
+    password: str | None = None,
 ) -> dict[str, Any]:
     if version is None:
         version = papis.config.getint("version", section="uefiscdi")
@@ -121,36 +121,31 @@ def parse_uefiscdi(
 
     logger.info("Downloaded file at '%s'.", filename)
 
-    password = None
-    if use_password:
+    if password is None:
         password = papis.config.get("password", section="uefiscdi")
+
+    from papis_uefiscdi import uefiscdi
 
     entries: list[Any]
     if database == "aisq":
-        from papis_uefiscdi.uefiscdi import parse_uefiscdi_article_influence_score
-
-        entries = parse_uefiscdi_article_influence_score(filename, version=version)
+        entries = uefiscdi.parse_uefiscdi_article_influence_score(
+            filename, version=version
+        )
     elif database == "jifq":
-        from papis_uefiscdi.uefiscdi import parse_uefiscdi_journal_impact_factor
-
-        entries = parse_uefiscdi_journal_impact_factor(filename, version=version)
+        entries = uefiscdi.parse_uefiscdi_journal_impact_factor(
+            filename, version=version
+        )
     elif database == "ais":
-        from papis_uefiscdi.uefiscdi import parse_uefiscdi_article_influence_scores
-
-        entries = parse_uefiscdi_article_influence_scores(
+        entries = uefiscdi.parse_uefiscdi_article_influence_scores(
             filename, version=version, password=password
         )
     elif database == "ris":
-        from papis_uefiscdi.uefiscdi import parse_uefiscdi_relative_influence_scores
-
-        entries = parse_uefiscdi_relative_influence_scores(
-            filename, version=version, password=password
+        entries = uefiscdi.parse_uefiscdi_relative_influence_scores(
+            filename, version=version
         )
     elif database == "rif":
-        from papis_uefiscdi.uefiscdi import parse_uefiscdi_relative_impact_factors
-
-        entries = parse_uefiscdi_relative_impact_factors(
-            filename, version=version, password=password
+        entries = uefiscdi.parse_uefiscdi_relative_impact_factors(
+            filename, version=version
         )
     else:
         raise ValueError(f"Unknown database name: '{database}'")
@@ -239,11 +234,8 @@ def find_uefiscdi(
 @papis.cli.all_option()
 @papis.cli.sort_option()
 @click.option(
-    "--no-password",
-    flag_value=True,
-    default=False,
-    is_flag=True,
-    help="Do not attempt do descrypt remote file before parsing",
+    "--password",
+    help="Password to use when opening the remote database file",
 )
 @click.option(
     "--overwrite",
@@ -275,7 +267,7 @@ def cli(
     _all: bool,
     sort_field: str | None,
     sort_reverse: bool,
-    no_password: bool,
+    password: str | None,
     overwrite: bool,
     batch: bool,
     list_databases: bool,
@@ -300,9 +292,7 @@ def cli(
 
     from collections import defaultdict
 
-    db = get_uefiscdi_database(
-        database, overwrite=overwrite, use_password=not no_password
-    )
+    db = get_uefiscdi_database(database, overwrite=overwrite, password=password)
     journal_to_entry = defaultdict(list)
     for entry in db["entries"]:
         journal_to_entry[entry["name"].lower()].append(entry)
@@ -344,20 +334,22 @@ def entry_to_papis(entry: dict[str, Any], version: int) -> papis.document.Docume
     # picker header format used by papis at the moment, but it should look ok
     # with other pickers as well
 
+    quartile = entry.get("quartile") or "N/A"
+    score = entry.get("score") or "N/A"
+    if score != "N/A":
+        score = f"{score:.3f}"
+
     return papis.document.from_data(
         {
-            "title": "{} ({})".format(
-                entry["name"], entry.get("issn") or entry.get("eissn")
+            "title": "[{}] {}".format(
+                entry.get("issn") or entry.get("eissn"),
+                entry["name"],
             ),
-            "author": "Category: {} / Index: {}".format(
+            "author": "Category: {} | Index: {}".format(
                 entry.get("category", "unknown"), entry.get("index", "unknown")
             ),
             "year": version,
-            "tags": (
-                "Quartile: {}".format(entry["quartile"])
-                if "quartile" in entry
-                else "Score: {}".format(entry["score"])
-            ),
+            "tags": f"Score {score} | Quartile {quartile}",
         }
     )
 
@@ -367,10 +359,23 @@ def entry_to_papis(entry: dict[str, Any], version: int) -> papis.document.Docume
 @click.help_option("--help", "-h")
 @click.option("--query", "-q", default="")
 @click.option(
+    "-d",
     "--database",
     type=click.Choice(list(UEFISCDI_SUPPORTED_DATABASES)),
     default="jifq",
     help="Add quartiles or scores from the database",
+)
+@click.option(
+    "--min-quartile",
+    type=click.Choice(["Q1", "Q2", "Q3", "Q4"]),
+    default="Q4",
+    help="Minimum quartile (if available) for the query results",
+)
+@click.option(
+    "--min-score",
+    type=float,
+    default=0.0,
+    help="Minimum score (if available) for the query results",
 )
 @click.option(
     "--accuracy",
@@ -379,24 +384,33 @@ def entry_to_papis(entry: dict[str, Any], version: int) -> papis.document.Docume
     help="A number between in (0, 1) for accuracy in matching journal names",
 )
 def explorer(
-    ctx: click.core.Context, query: str, database: str, accuracy: float
+    ctx: click.core.Context,
+    query: str,
+    database: str,
+    min_quartile: str,
+    min_score: float,
+    accuracy: float,
 ) -> None:
     from difflib import SequenceMatcher
 
     query = query.lower()
 
-    def match(journal: str) -> bool:
+    def match(entry: dict[str, Any]) -> bool:
         if not query:
             return True
 
-        journal = journal.lower()
-        if query in journal:
-            return True
+        journal = entry["name"].lower()
+        quartile = entry.get("quartile") or min_quartile
+        score = entry.get("score") or min_score
+        if all(q in journal for q in query.split(" ")):
+            journal_match = True
+        else:
+            journal_match = SequenceMatcher(None, query, journal).ratio() > accuracy
 
-        return SequenceMatcher(None, query, journal).ratio() > accuracy
+        return journal_match and quartile <= min_quartile and float(score) >= min_score
 
     db = get_uefiscdi_database(database)
-    matches = [entry for entry in db["entries"] if match(entry["name"])]
+    matches = [entry for entry in db["entries"] if match(entry)]
     logger.info("Found %s documents.", len(matches))
 
     ctx.obj["documents"] += [
