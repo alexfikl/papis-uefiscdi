@@ -10,7 +10,7 @@ beautifulsoup4==4.12.2
     # via papis
 bibtexparser==1.4.1
     # via papis
-certifi==2023.7.22
+certifi==2023.11.17
     # via requests
 cffi==1.16.0
     # via cryptography
@@ -22,9 +22,9 @@ click==8.1.7
     # via papis
 colorama==0.4.6
     # via papis
-cryptography==41.0.5
+cryptography==41.0.7
     # via msoffcrypto-tool
-dominate==2.8.0
+dominate==2.9.1
     # via papis
 et-xmlfile==1.1.0
     # via openpyxl
@@ -32,35 +32,35 @@ filetype==1.2.0
     # via papis
 habanero==1.2.3
     # via papis
-idna==3.4
+idna==3.6
     # via requests
 isbnlib==3.10.14
     # via papis
-lxml==4.9.3
+lxml==5.0.0
     # via papis
 msoffcrypto-tool==5.1.1
     # via papis-uefiscdi (pyproject.toml)
-olefile==0.46
+olefile==0.47
     # via msoffcrypto-tool
 openpyxl==3.1.2
     # via papis-uefiscdi (pyproject.toml)
 papis==0.13
     # via papis-uefiscdi (pyproject.toml)
-pbr==5.11.1
+pbr==6.0.0
     # via stevedore
-platformdirs==3.11.0
+platformdirs==4.1.0
     # via papis-uefiscdi (pyproject.toml)
-prompt-toolkit==3.0.39
+prompt-toolkit==3.0.43
     # via papis
 pycparser==2.21
     # via cffi
-pygments==2.16.1
+pygments==2.17.2
     # via papis
 pyparsing==3.1.1
     # via
     #   bibtexparser
     #   papis
-pypdf==3.17.0
+pypdf==3.17.4
     # via papis-uefiscdi (pyproject.toml)
 pyperclip==1.8.2
     # via papis-uefiscdi (pyproject.toml)
@@ -86,9 +86,9 @@ tqdm==4.66.1
     # via
     #   habanero
     #   papis
-typing-extensions==4.8.0
+typing-extensions==4.9.0
     # via papis
-urllib3==2.0.7
+urllib3==2.1.0
     # via requests
-wcwidth==0.2.9
+wcwidth==0.2.12
     # via prompt-toolkit
