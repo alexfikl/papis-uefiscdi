@@ -89,26 +89,24 @@ def create_random_file(
         )
         suffix = ".epub" if suffix is None else suffix
     elif filetype == "djvu":
-        buf = bytes(
-            [
-                0x41,
-                0x54,
-                0x26,
-                0x54,
-                0x46,
-                0x4F,
-                0x52,
-                0x4D,
-                0x00,
-                0x00,
-                0x00,
-                0x00,
-                0x44,
-                0x4A,
-                0x56,
-                0x4D,
-            ]
-        )
+        buf = bytes([
+            0x41,
+            0x54,
+            0x26,
+            0x54,
+            0x46,
+            0x4F,
+            0x52,
+            0x4D,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x44,
+            0x4A,
+            0x56,
+            0x4D,
+        ])
         suffix = ".djvu" if suffix is None else suffix
     elif filetype == "text":
         buf = b"papis-test-file-contents"

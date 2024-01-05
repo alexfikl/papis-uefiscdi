@@ -35,23 +35,17 @@ UEFISCDI_DATABASE_TO_KEY = {
     "rif": "uefiscdi_rif_score",
 }
 
-papis.config.register_default_settings(
-    {
-        "uefiscdi": {
-            "version": 2023,
-            "aisq-url": (
-                "https://uefiscdi.gov.ro/resource-866007-zone.iunie.2023.ais.pdf"
-            ),
-            "jifq-url": (
-                "https://uefiscdi.gov.ro/resource-866009-zone.iunie.2023.jif.pdf"
-            ),
-            "ais-url": "https://uefiscdi.gov.ro/resource-863884-ais_2022.xlsx",
-            "rif-url": "https://uefiscdi.gov.ro/resource-863887-rif_2022.xlsx",
-            "ris-url": "https://uefiscdi.gov.ro/resource-863882-ris_2022.xlsx",
-            "password": "uefiscdi",
-        }
+papis.config.register_default_settings({
+    "uefiscdi": {
+        "version": 2023,
+        "aisq-url": "https://uefiscdi.gov.ro/resource-866007-zone.iunie.2023.ais.pdf",
+        "jifq-url": "https://uefiscdi.gov.ro/resource-866009-zone.iunie.2023.jif.pdf",
+        "ais-url": "https://uefiscdi.gov.ro/resource-863884-ais_2022.xlsx",
+        "rif-url": "https://uefiscdi.gov.ro/resource-863887-rif_2022.xlsx",
+        "ris-url": "https://uefiscdi.gov.ro/resource-863882-ris_2022.xlsx",
+        "password": "uefiscdi",
     }
-)
+})
 
 
 def get_uefiscdi_database_path(database: str) -> pathlib.Path:
@@ -339,19 +333,17 @@ def entry_to_papis(entry: dict[str, Any], version: int) -> papis.document.Docume
     if score != "N/A":
         score = f"{score:.3f}"
 
-    return papis.document.from_data(
-        {
-            "title": "[{}] {}".format(
-                entry.get("issn") or entry.get("eissn"),
-                entry["name"],
-            ),
-            "author": "Category: {} | Index: {}".format(
-                entry.get("category", "unknown"), entry.get("index", "unknown")
-            ),
-            "year": version,
-            "tags": f"Score {score} | Quartile {quartile}",
-        }
-    )
+    return papis.document.from_data({
+        "title": "[{}] {}".format(
+            entry.get("issn") or entry.get("eissn"),
+            entry["name"],
+        ),
+        "author": "Category: {} | Index: {}".format(
+            entry.get("category", "unknown"), entry.get("index", "unknown")
+        ),
+        "year": version,
+        "tags": f"Score {score} | Quartile {quartile}",
+    })
 
 
 @click.command("uefiscdi")
