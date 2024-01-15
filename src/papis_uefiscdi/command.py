@@ -278,10 +278,10 @@ def cli(
 
     documents = papis.cli.handle_doc_folder_query_all_sort(
         query,
-        doc_folder,
+        doc_folder,  # type: ignore[arg-type,unused-ignore]
         sort_field,
         sort_reverse,
-        _all,  # type: ignore[arg-type,unused-ignore]
+        _all,
     )
 
     if not documents:
