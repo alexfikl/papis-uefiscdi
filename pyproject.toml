@@ -69,7 +69,8 @@ uefiscdi = "papis_uefiscdi.command:cli"
 uefiscdi = "papis_uefiscdi.command:explorer"
 
 [tool.setuptools]
-packages = ["papis_uefiscdi"]
+package-dir = { "" = "src" }
+packages = { find = { where = ["src"] } }
 
 [tool.setuptools.package-data]
 papis_uefiscdi = ["py.typed"]

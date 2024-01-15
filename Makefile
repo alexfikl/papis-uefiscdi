@@ -20,24 +20,24 @@ fmt: format
 .PHONY: fmt
 
 black:			## Run black over the source code
-	$(PYTHON) -m black papis_uefiscdi test
+	$(PYTHON) -m black src test
 	@echo -e "\e[1;32mblacked!\e[0m"
 .PHONY: black
 
 isort:			## Run isort over the source code
-	$(PYTHON) -m isort papis_uefiscdi test
+	$(PYTHON) -m isort src test
 	@echo -e "\e[1;32misorted!\e[0m"
 .PHONY: isort
 
 lint: ruff reuse codespell manifest mypy	## Run all linting checks
 
 ruff:			## Run ruff checks over the source code
-	ruff check papis_uefiscdi test
+	ruff check src test
 	@echo -e "\e[1;32mruff clean!\e[0m"
 .PHONY: ruff
 
 mypy:			## Run mypy checks over the source code
-	$(PYTHON) -m mypy papis_uefiscdi test
+	$(PYTHON) -m mypy src test
 	@echo -e "\e[1;32mmypy (strict) clean!\e[0m"
 .PHONY: mypy
 
@@ -45,7 +45,7 @@ codespell:		## Run codespell checks over the documentation
 	@codespell --summary \
 		--skip _build \
 		--ignore-words .codespell-ignore \
-		papis_uefiscdi test
+		src test
 .PHONY: codespell
 
 reuse:			## Check REUSE license compliance
