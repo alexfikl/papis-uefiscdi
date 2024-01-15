@@ -11,23 +11,26 @@ help: 			## Show this help
 
 # {{{ linting
 
-format: black isort		## Run all formatting scripts
-	$(PYTHON) -m pyproject_fmt --indent 4 pyproject.toml
-	@echo -e "\e[1;32msetup formatted!\e[0m"
+format: black isort pyproject				## Run all formatting scripts
 .PHONY: format
 
 fmt: format
 .PHONY: fmt
 
-black:			## Run black over the source code
-	$(PYTHON) -m black src test
-	@echo -e "\e[1;32mblacked!\e[0m"
+black:			## Run ruff format over the source code
+	ruff format src test docs
+	@echo -e "\e[1;32mruff format clean!\e[0m"
 .PHONY: black
 
-isort:			## Run isort over the source code
-	$(PYTHON) -m isort src test
-	@echo -e "\e[1;32misorted!\e[0m"
+isort:			## Run ruff isort fixes over the source code
+	ruff check --fix --select=I src test docs
+	@echo -e "\e[1;32mruff isort clean!\e[0m"
 .PHONY: isort
+
+pyproject:		## Run pyproject-fmt over the configuration
+	$(PYTHON) -m pyproject_fmt --indent 4 pyproject.toml
+	@echo -e "\e[1;32mpyproject clean!\e[0m"
+.PHONY: pyproject
 
 lint: ruff reuse codespell manifest mypy	## Run all linting checks
 
@@ -44,8 +47,10 @@ mypy:			## Run mypy checks over the source code
 codespell:		## Run codespell checks over the documentation
 	@codespell --summary \
 		--skip _build \
+		--uri-ignore-words-list '*' \
 		--ignore-words .codespell-ignore \
-		src test
+		src test docs
+	@echo -e "\e[1;32mcodespell clean!\e[0m"
 .PHONY: codespell
 
 reuse:			## Check REUSE license compliance

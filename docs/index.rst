@@ -2,7 +2,7 @@ UEFISCDI
 ========
 
 This library handles downloading data from the `UEFISCDI <https://uefiscdi.gov.ro/>`__
-(the main research financing body in Romania) and trasforming it into a more open
+(the main research financing body in Romania) and transforming it into a more open
 and easy to manipulate format (e.g. CSV). The plugin supports obtaining:
 
 * Journal Impact Factor (JIF) data . At the moment of writing, this data can be

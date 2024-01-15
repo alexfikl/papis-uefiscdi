@@ -104,7 +104,7 @@ def run(
     if not shutil.which(cmd[0]):
         raise FileNotFoundError(f"Command not found: '{cmd[0]}'")
 
-    import subprocess
+    import subprocess  # noqa: S404
 
     if wait:
         logger.debug("Waiting for process to finish.")

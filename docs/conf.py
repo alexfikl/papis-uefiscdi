@@ -37,7 +37,7 @@ exclude_patterns = ["_build", "Thumbs.db", ".DS_Store"]
 # highlighting
 pygments_style = "sphinx"
 # language
-langauge = "en"
+language = "en"
 
 html_theme = "sphinx_book_theme"
 html_title = project
