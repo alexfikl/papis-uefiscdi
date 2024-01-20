@@ -6,7 +6,7 @@
 #
 arxiv2bib==1.0.8
     # via papis
-beautifulsoup4==4.12.2
+beautifulsoup4==4.12.3
     # via papis
 bibtexparser==1.4.1
     # via papis
@@ -38,7 +38,7 @@ isbnlib==3.10.14
     # via papis
 lxml==5.1.0
     # via papis
-msoffcrypto-tool==5.2.0
+msoffcrypto-tool==5.3.1
     # via papis-uefiscdi (pyproject.toml)
 olefile==0.47
     # via msoffcrypto-tool
@@ -60,7 +60,7 @@ pyparsing==3.1.1
     # via
     #   bibtexparser
     #   papis
-pypdf==3.17.4
+pypdf==4.0.0
     # via papis-uefiscdi (pyproject.toml)
 pyperclip==1.8.2
     # via papis-uefiscdi (pyproject.toml)

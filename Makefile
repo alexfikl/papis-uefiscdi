@@ -24,6 +24,7 @@ black:			## Run ruff format over the source code
 
 isort:			## Run ruff isort fixes over the source code
 	ruff check --fix --select=I src test docs
+	ruff check --fix --select=RUF022 src
 	@echo -e "\e[1;32mruff isort clean!\e[0m"
 .PHONY: isort
 
@@ -76,18 +77,21 @@ requirements.txt: pyproject.toml
 	$(PYTHON) -m piptools compile \
 		--resolver=backtracking --strip-extras --upgrade \
 		-o $@ $<
+.PHONY: requirements.txt
 
 requirements-dev.txt: pyproject.toml
 	$(PYTHON) -m piptools compile \
 		--resolver=backtracking --upgrade \
 		--extra dev --extra docs \
 		-o $@ $<
+.PHONY: requirements-dev.txt
 
 docs/requirements.txt: pyproject.toml
 	$(PYTHON) -m piptools compile \
 		--resolver=backtracking --upgrade \
 		--extra docs \
 		-o $@ $<
+.PHONY: docs/requirements.txt
 
 pin: $(REQUIREMENTS) 	## Pin dependencies versions to requirements.txt
 .PHONY: pin
