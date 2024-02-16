@@ -74,21 +74,18 @@ REQUIREMENTS=\
 	docs/requirements.txt
 
 requirements.txt: pyproject.toml
-	$(PYTHON) -m piptools compile \
-		--resolver=backtracking --strip-extras --upgrade \
+	uv pip compile --upgrade --resolution highest \
 		-o $@ $<
 .PHONY: requirements.txt
 
 requirements-dev.txt: pyproject.toml
-	$(PYTHON) -m piptools compile \
-		--resolver=backtracking --upgrade \
+	uv pip compile --upgrade --resolution highest \
 		--extra dev --extra docs \
 		-o $@ $<
 .PHONY: requirements-dev.txt
 
 docs/requirements.txt: pyproject.toml
-	$(PYTHON) -m piptools compile \
-		--resolver=backtracking --upgrade \
+	uv pip compile --upgrade --resolution highest \
 		--extra docs \
 		-o $@ $<
 .PHONY: docs/requirements.txt

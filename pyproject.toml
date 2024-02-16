@@ -47,7 +47,6 @@ dev = [
     "check-manifest",
     "codespell",
     "mypy",
-    "pip-tools",
     "pytest",
     "reuse",
     "ruff",
@@ -56,6 +55,7 @@ dev = [
     "types-python-slugify",
     "types-PyYAML",
     "types-requests",
+    "uv",
 ]
 docs = [
     "sphinx",
