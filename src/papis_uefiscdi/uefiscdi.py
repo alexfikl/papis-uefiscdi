@@ -14,13 +14,14 @@ logger = papis.logging.get_logger(__name__)
 
 # {{{ utils
 
-#: A mapping of indexes (as they appear in the UEFISCDI databases) to their
-#: full names.
 INDEX_ID_TO_NAME = {
     "AHCI": "Arts Humanities Citation Index",
     "SCIE": "Science Citation Index Expanded",
     "SSCI": "Social Sciences Citation Index",
 }
+"""A mapping of indexes (as they appear in the UEFISCDI databases) to their
+full names.
+"""
 
 
 class Entry(TypedDict):
@@ -31,24 +32,25 @@ class Entry(TypedDict):
     by the UEFISCDI.
     """
 
-    #: Web of Science category for this journal.
     category: str | None
-    #: Citation index identifier (see :data:`INDEX_ID_TO_NAME`).
+    """Web of Science category for this journal."""
     index: str | None
+    """Citation index identifier (see :data:`INDEX_ID_TO_NAME`)."""
 
-    #: Name of the journal in the provided format.
     name: str | None
-    #: International Standard Serial Number (ISSN) assigned to the journal.
+    """Name of the journal in the provided format."""
     issn: str | None
-    #: Electronic ISSN assigned to the journal.
+    """International Standard Serial Number (ISSN) assigned to the journal."""
     eissn: str | None
-    #: Quartile to which the journal belongs to, in the ``QX`` format.
+    """Electronic ISSN assigned to the journal."""
     quartile: str | None
-    #: Position in its quartile based on the Journal Impact factor (JIF)
-    #: or the Article Influence Score (AIS).
+    """Quartile to which the journal belongs to, in the ``QX`` format."""
     position: int | None
-    #: Numerical score of the journal
+    """Position in its quartile based on the Journal Impact factor (JIF)
+    or the Article Influence Score (AIS).
+    """
     score: float | None
+    """Numerical score of the journal."""
 
 
 def stringify(entry: Entry, database: str) -> str:

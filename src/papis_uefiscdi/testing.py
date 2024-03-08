@@ -221,26 +221,29 @@ class TemporaryConfiguration:
             assert value == "papis"
     """
 
-    #: Name of the default library
     libname: ClassVar[str] = "test"
+    """Name of the default library."""
 
     def __init__(
         self, settings: Optional[Dict[str, Any]] = None, *, overwrite: bool = False
     ) -> None:
-        #: A set of settings to be added to the configuration on creation
         self.settings: Optional[Dict[str, Any]] = settings
-        #: If *True*, any configuration settings are overwritten by *settings*.
+        """A set of settings to be added to the configuration on creation."""
         self.overwrite: bool = overwrite
+        """If *True*, any configuration settings are overwritten by *settings*."""
 
-        #: When entering the context manager, this will contain the directory of
-        #: a temporary library to run tests on. The library is unpopulated by default
         self.libdir: str = ""
-        #: When entering the context manager, this will contain the config
-        #: directory used by papis.
+        """When entering the context manager, this will contain the directory of
+        a temporary library to run tests on. The library is unpopulated by default.
+        """
         self.configdir: str = ""
-        #: When entering the context manager, this will contain the config
-        #: file used by papis.
+        """When entering the context manager, this will contain the config
+        directory used by papis.
+        """
         self.configfile: str = ""
+        """When entering the context manager, this will contain the config
+        file used by papis.
+        """
 
         self._tmpdir: Optional[tempfile.TemporaryDirectory[str]] = None
         self._monkeypatch: Optional[pytest.MonkeyPatch] = None
@@ -360,11 +363,12 @@ class TemporaryLibrary(TemporaryConfiguration):
     ) -> None:
         super().__init__(settings=settings)
 
-        #: If *True*, a git repository is created in the library directory.
         self.use_git = use_git
-        #: If *True*, the library is prepopulated with a set of documents that
-        #: contain random files and keys, which can be used for testing.
+        """If *True*, a git repository is created in the library directory."""
         self.populate = populate
+        """If *True*, the library is prepopulated with a set of documents that
+        contain random files and keys, which can be used for testing.
+        """
 
     def __enter__(self) -> "TemporaryLibrary":
         super().__enter__()
@@ -456,13 +460,14 @@ class ResourceCache:
     def __init__(self, cachedir: str) -> None:
         import papis.utils
 
-        #: The location of the resource directory.
         self.cachedir = os.path.abspath(cachedir)
+        """The location of the resource directory."""
+
         if not os.path.exists(self.cachedir):
             raise ValueError(f"Cache directory does not exist: {self.cachedir}")
 
-        #: A :class:`requests.Session` used to download remote resources.
         self.session = papis.utils.get_session()
+        """A :class:`requests.Session` used to download remote resources."""
 
     def get_remote_resource(
         self,
