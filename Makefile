@@ -33,7 +33,7 @@ pyproject:		## Run pyproject-fmt over the configuration
 	@echo -e "\e[1;32mpyproject clean!\e[0m"
 .PHONY: pyproject
 
-lint: ruff reuse codespell manifest mypy	## Run all linting checks
+lint: ruff reuse codespell mypy				## Run all linting checks
 
 ruff:			## Run ruff checks over the source code
 	ruff check src test
@@ -58,11 +58,6 @@ reuse:			## Check REUSE license compliance
 	$(PYTHON) -m reuse lint
 	@echo -e "\e[1;32mREUSE compliant!\e[0m"
 .PHONY: reuse
-
-manifest:		## Update MANIFEST.in file
-	$(PYTHON) -m check_manifest
-	@echo -e "\e[1;32mMANIFEST.in is up to date!\e[0m"
-.PHONY: manifest
 
 # }}}
 
@@ -94,7 +89,7 @@ pin: $(REQUIREMENTS) 	## Pin dependencies versions to requirements.txt
 .PHONY: pin
 
 pip-install:	## Install pinned depdencies from requirements.txt
-	$(PYTHON) -m pip install --upgrade pip setuptools wheel
+	$(PYTHON) -m pip install --upgrade pip hatchling wheel
 	$(PYTHON) -m pip install -r requirements-dev.txt -e .
 .PHONY: pip-install
 

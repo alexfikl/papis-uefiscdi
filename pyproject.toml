@@ -1,15 +1,14 @@
 [build-system]
-build-backend = "setuptools.build_meta"
+build-backend = "hatchling.build"
 requires = [
-    "setuptools>=42",
-    "wheel",
+    "hatchling>=1.10.0",
 ]
 
 [project]
 name = "papis-uefiscdi"
 version = "0.1.0"
 description = "Some simple plugins for papis"
-readme = "README.md"
+readme = "README.rst"
 keywords = [
     "bibliography",
 ]
@@ -44,7 +43,6 @@ dependencies = [
 ]
 [project.optional-dependencies]
 dev = [
-    "check-manifest",
     "codespell",
     "mypy",
     "pytest",
@@ -69,12 +67,11 @@ uefiscdi = "papis_uefiscdi.command:cli"
 [project.entry-points."papis.explorer"]
 uefiscdi = "papis_uefiscdi.command:explorer"
 
-[tool.setuptools]
-package-dir = { "" = "src" }
-packages = { find = { where = ["src"] } }
+[tool.hatch.build.targets.sdist]
+exclude = [".github", ".ci", "docs/_build"]
 
-[tool.setuptools.package-data]
-papis_uefiscdi = ["py.typed"]
+[tool.hatch.build.targets.wheel]
+packages = ["src/papis_uefiscdi"]
 
 [tool.ruff]
 preview = true
@@ -126,13 +123,6 @@ multiline-quotes = "double"
 
 [tool.ruff.lint.isort]
 known-first-party = ["papis", "papis_uefiscdi"]
-
-[tool.check-manifest]
-ignore = [
-    "*.yml",
-    "*.yaml",
-    ".ci/*",
-]
 
 [tool.mypy]
 strict = true
