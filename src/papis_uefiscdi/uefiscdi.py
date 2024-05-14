@@ -326,12 +326,12 @@ def _parse_ais_score_entries_2023(filename: pathlib.Path) -> list[Entry]:
             category = index = quartile = None
         elif len(row) == 6:
             # NOTE: AIS has 6 columns
-            journal, issn, eissn, category_index, score, quartile = row
+            journal, issn, eissn, category_index, score, quartile_value = row
 
             category, index = str(category_index.value).split(" - ")
             category = titlecase(category.strip())
             index = index.strip().upper()
-            quartile = None if (q := str(quartile.value).upper()) == "N/A" else q
+            quartile = None if (q := str(quartile_value.value).upper()) == "N/A" else q
         else:
             continue
 
@@ -339,7 +339,7 @@ def _parse_ais_score_entries_2023(filename: pathlib.Path) -> list[Entry]:
             break
 
         try:
-            score = float(score.value)
+            score = float(score.value)  # type: ignore[arg-type]
         except ValueError:
             score = None
 
