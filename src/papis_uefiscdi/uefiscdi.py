@@ -202,7 +202,7 @@ def parse_uefiscdi_journal_impact_factor(
             )
             results.extend(journals)
 
-        logger.info("Extracted %d journal from %d pages", len(results), len(pdf.pages))
+        logger.info("Extracted %d journals from %d pages", len(results), len(pdf.pages))
 
     return sorted(
         results,
@@ -269,7 +269,7 @@ def parse_uefiscdi_article_influence_score(
             )
             results.extend(journals)
 
-        logger.info("Extracted %d journal from %d pages", len(results), len(pdf.pages))
+        logger.info("Extracted %d journals from %d pages", len(results), len(pdf.pages))
 
     return sorted(
         results,

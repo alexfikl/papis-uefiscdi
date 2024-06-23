@@ -3,8 +3,9 @@
 
 from __future__ import annotations
 
+import json
 import pathlib
-from typing import Any
+from typing import Any, Match, Pattern
 
 import click
 
@@ -13,7 +14,6 @@ import papis.config
 import papis.document
 import papis.logging
 import papis.strings
-from papis.document import Document
 
 logger = papis.logging.get_logger(__name__)
 
@@ -48,20 +48,47 @@ papis.config.register_default_settings({
 })
 
 
-def get_uefiscdi_database_path(database: str) -> pathlib.Path:
+def get_uefiscdi_database_path(database: str, version: int) -> pathlib.Path:
     config_dir = pathlib.Path(papis.config.get_config_folder())
-    return config_dir / "uefiscdi" / f"{database}.json"
+    return config_dir / "uefiscdi" / str(version) / f"{database}.json"
+
+
+def load_uefiscdi_database(database: str, version: int | None = None) -> dict[str, Any]:
+    if version is None:
+        version = papis.config.getint("version", section="uefiscdi")
+
+    assert version is not None
+
+    filename = get_uefiscdi_database_path(database, version)
+    if not filename.exists():
+        logger.error("File for database '%s' does not exist: '%s'", database, filename)
+        logger.error("Run 'papis uefiscdi index -d %s' to download it.", database)
+        return {}
+
+    logger.info("Database loaded from '%s'.", filename)
+
+    with open(filename, encoding="utf-8") as inf:
+        db = json.load(inf)
+
+    return dict(db)
 
 
 def get_uefiscdi_database(
-    database: str, *, overwrite: bool = False, password: str | None = None
+    database: str,
+    *,
+    overwrite: bool = False,
+    password: str | None = None,
+    version: int | None = None,
 ) -> dict[str, Any]:
-    import json
+    if version is None:
+        version = papis.config.getint("version", section="uefiscdi")
 
-    filename = get_uefiscdi_database_path(database)
+    assert version is not None
+
+    filename = get_uefiscdi_database_path(database, version)
     if not filename.exists() or overwrite:
         try:
-            db = parse_uefiscdi(database, password=password)
+            db = parse_uefiscdi(database, password=password, version=version)
         except Exception as exc:
             logger.error(
                 "Could not parse UEFISCDI database '%s'", database, exc_info=exc
@@ -147,61 +174,52 @@ def parse_uefiscdi(
     return {"id": database, "version": version, "url": url, "entries": entries}
 
 
-def find_uefiscdi(
-    database: str,
-    db: dict[str, Any],
-    doc: Document,
-    key: str,
+def to_dummy_document(
+    entry: dict[str, Any],
     *,
-    accuracy: float = 0.8,
-    batch: bool = True,
-) -> str | None:
-    journal = doc.get("journal")
-    if not journal:
-        return None
+    index: int,
+    name: str,
+    version: int,
+) -> papis.document.Document:
+    # NOTE: this is essentially constructed so that it looks nice with the default
+    # picker header format used by papis at the moment, but it should look ok
+    # with other pickers as well
 
-    from difflib import SequenceMatcher
+    quartile = entry["quartile"] or "N/A"
+    score = entry["score"] or "N/A"
+    if score != "N/A":
+        score = f"{score:.3f}"
 
-    journal = journal.lower()
-    if journal in db:
-        matches = db[journal]
+    return papis.document.from_data({
+        # NOTE: used to retrieve original entry
+        "_id": index,
+        "title": "[{}] {}".format(
+            entry["issn"] or entry["eissn"],
+            entry["name"],
+        ),
+        "author": "Category: {} | Index: {}".format(
+            entry["category"] or "unknown",
+            entry["index"] or "unknown",
+        ),
+        "tags": f"{name.upper()} Score {score} | Quartile {quartile}",
+        "year": version,
+        **entry,
+    })
+
+
+def match_journal(
+    document: papis.document.Document,
+    search: Pattern[str],
+    match_format: str | None = None,
+    doc_key: str | None = None,
+) -> Match[str] | None:
+    match_format = match_format or "{doc[title]}{doc[author]}"
+    if doc_key is not None:
+        match_string = str(document[doc_key])
     else:
-        matches = [
-            entry
-            for name, entry in db.items()
-            if SequenceMatcher(None, journal, name).ratio() > accuracy
-        ]
+        match_string = papis.format.format(match_format, document)
 
-    if not matches:
-        return None
-
-    if len(matches) == 1:
-        (match,) = matches
-    elif batch:
-        # NOTE: this usually happens because the same journal is in multiple
-        # categories; should use interactive mode for better options
-        logger.info(
-            "Found multiple matches: '%s'. Picking the first one!",
-            "', '".join(m["name"] for m in matches),
-        )
-        match = matches[0]
-    else:
-        from papis.tui.utils import select_range
-        from papis_uefiscdi.uefiscdi import stringify
-
-        indices: list[int] = []
-        while len(indices) != 1:
-            indices = select_range(
-                [stringify(match, database) for match in matches],
-                "Select matching journal",
-            )
-
-            if len(indices) != 1:
-                logger.error("Can only select a single journal")
-
-        match = matches[indices[0]]
-
-    return str(match[key])
+    return search.match(match_string)
 
 
 # }}}
@@ -210,41 +228,8 @@ def find_uefiscdi(
 # {{{ command
 
 
-@click.command("uefiscdi")
+@click.group("uefiscdi")
 @click.help_option("--help", "-h")
-@papis.cli.query_argument()
-@click.option(
-    "--database",
-    type=click.Choice(list(UEFISCDI_SUPPORTED_DATABASES)),
-    help="Add quartiles or scores from the database",
-)
-@click.option(
-    "--accuracy",
-    type=float,
-    default=0.8,
-    help="A number between in (0, 1) for accuracy in matching journal names",
-)
-@papis.cli.doc_folder_option()
-@papis.cli.all_option()
-@papis.cli.sort_option()
-@click.option(
-    "--password",
-    help="Password to use when opening the remote database file",
-)
-@click.option(
-    "--overwrite",
-    flag_value=True,
-    default=False,
-    is_flag=True,
-    help="Overwrite existing UEFISCDI databases",
-)
-@click.option(
-    "--batch",
-    flag_value=True,
-    default=False,
-    is_flag=True,
-    help="Run in batch mode (no interactive prompts)",
-)
 @click.option(
     "--list-databases",
     "list_databases",
@@ -253,176 +238,142 @@ def find_uefiscdi(
     is_flag=True,
     help="List all known databases and their descriptions",
 )
-def cli(
+def cli(list_databases: bool) -> None:
+    """Managed UEFISCDI scientometric databases"""
+    if not list_databases:
+        return
+
+    import colorama
+
+    for did, description in UEFISCDI_SUPPORTED_DATABASES.items():
+        click.echo(f"{colorama.Style.BRIGHT}{did}{colorama.Style.RESET_ALL}")
+        click.echo(f"    {description}")
+
+
+@cli.command("index")
+@click.help_option("--help", "-h")
+@click.option(
+    "-p",
+    "--password",
+    help="Password to use when opening the remote database file",
+)
+@click.option(
+    "--year",
+    type=int,
+    default=None,
+    help="Year the database was released",
+)
+@click.option(
+    "--overwrite",
+    flag_value=True,
+    default=False,
+    is_flag=True,
+    help="Overwrite existing UEFISCDI databases",
+)
+def cli_index(password: str, year: int | None, overwrite: bool) -> None:
+    """Download and parse UEFISCDI databases"""
+    if year is None:
+        year = papis.config.get("version", section="uefiscdi")
+
+    for name in UEFISCDI_SUPPORTED_DATABASES:
+        get_uefiscdi_database(
+            name, overwrite=overwrite, password=password, version=year
+        )
+
+
+@cli.command("search")
+@click.help_option("--help", "-h")
+@click.argument("query", default=".", type=str)
+@click.option(
+    "-d",
+    "--database",
+    required=True,
+    type=click.Choice(list(UEFISCDI_SUPPORTED_DATABASES)),
+    help="Database to search for scores",
+)
+@click.option(
+    "--year",
+    type=int,
+    default=None,
+    help="Year the database was released",
+)
+@click.option(
+    "-c",
+    "--category",
+    default=None,
+    help="A Web of Science category to restrict the results to",
+)
+@click.option(
+    "-q",
+    "--quartile",
+    default=None,
+    type=int,
+    help="Minimum quartile to display",
+)
+def cli_search(
     query: str,
     database: str,
-    accuracy: float,
-    doc_folder: str | tuple[str, ...],
-    _all: bool,
-    sort_field: str | None,
-    sort_reverse: bool,
-    password: str | None,
-    overwrite: bool,
-    batch: bool,
-    list_databases: bool,
+    year: int | None,
+    category: str | None,
+    quartile: int | None,
 ) -> None:
-    """Manage UEFISCDI journal impact factors and other indicators."""
-    if list_databases:
-        import colorama
+    """Search UEFISCDI databases"""
 
-        for did, description in UEFISCDI_SUPPORTED_DATABASES.items():
-            click.echo(f"{colorama.Style.BRIGHT}{did}{colorama.Style.RESET_ALL}")
-            click.echo(f"    {description}")
+    if year is None:
+        year = papis.config.get("version", section="uefiscdi")
 
-        return
+    assert year is not None
 
-    documents = papis.cli.handle_doc_folder_query_all_sort(
-        query,
-        doc_folder,  # type: ignore[arg-type,unused-ignore]
-        sort_field,
-        sort_reverse,
-        _all,
-    )
+    def match(entry: dict[str, Any]) -> bool:
+        e_category = entry.get("category")
+        in_category = not category or (e_category and category in e_category.lower())
 
-    if not documents:
-        logger.warning(papis.strings.no_documents_retrieved_message)
-        return
+        e_quartile = entry.get("quartile")
+        in_quartile = not quartile or (not e_quartile or quartile >= int(e_quartile[1]))
 
-    from collections import defaultdict
+        return bool(in_category and in_quartile)
 
-    db = get_uefiscdi_database(database, overwrite=overwrite, password=password)
-    journal_to_entry = defaultdict(list)
-    for entry in db["entries"]:
-        journal_to_entry[entry["name"].lower()].append(entry)
+    db = load_uefiscdi_database(database, year)
+    docs = [
+        to_dummy_document(entry, index=n, name=database, version=year)
+        for n, entry in enumerate(db["entries"])
+        if match(entry)
+    ]
 
-    from papis.api import save_doc
+    from papis.docmatcher import DocMatcher
 
-    for doc in documents:
-        doc_key = UEFISCDI_DATABASE_TO_KEY[database]
-        entry_key = doc_key.split("_")[-1]
-        result = find_uefiscdi(
-            database,
-            journal_to_entry,
-            doc,
-            entry_key,
-            accuracy=accuracy,
-            batch=batch,
-        )
-        if not result:
-            continue
+    DocMatcher.match_format = "{doc[title]}{doc[author]}"
+    DocMatcher.set_search(query)
+    DocMatcher.set_matcher(match_journal)
+    DocMatcher.parse()
 
-        logger.info(
-            "Setting key '%s' to '%s' (journal '%s').",
-            doc_key,
-            result,
-            doc["journal"],
-        )
-        doc[doc_key] = result
-        save_doc(doc)
+    from papis.utils import parmap
+
+    if query == ".":
+        filtered_docs = docs
+    else:
+        result = parmap(DocMatcher.return_if_match, docs)
+        filtered_docs = [e for e in result if e is not None]
+
+    from papis.pick import pick_doc
+
+    filtered_docs = [entry for entry in pick_doc(filtered_docs) if entry]
+    filtered_entries = [db["entries"][d["_id"]] for d in filtered_docs]
+
+    click.echo(json.dumps(filtered_entries, indent=2, sort_keys=True))
 
 
-# }}}
-
-
-# {{{ explorer
-
-
-def entry_to_papis(entry: dict[str, Any], version: int) -> papis.document.Document:
-    # NOTE: this is essentially constructed so that it looks nice with the default
-    # picker header format used by papis at the moment, but it should look ok
-    # with other pickers as well
-
-    quartile = entry.get("quartile") or "N/A"
-    score = entry.get("score") or "N/A"
-    if score != "N/A":
-        score = f"{score:.3f}"
-
-    return papis.document.from_data({
-        "title": "[{}] {}".format(
-            entry.get("issn") or entry.get("eissn"),
-            entry["name"],
-        ),
-        "author": "Category: {} | Index: {}".format(
-            entry.get("category", "unknown"), entry.get("index", "unknown")
-        ),
-        "year": version,
-        "tags": f"Score {score} | Quartile {quartile}",
-    })
-
-
-@click.command("uefiscdi")
-@click.pass_context
+@cli.command("add")
 @click.help_option("--help", "-h")
-@click.option("--query", "-q", default="")
 @click.option(
     "-d",
     "--database",
     type=click.Choice(list(UEFISCDI_SUPPORTED_DATABASES)),
-    default="jifq",
-    help="Add quartiles or scores from the database",
+    default="ais",
+    help="Database to search for scores",
 )
-@click.option(
-    "--min-quartile",
-    type=click.Choice(["Q1", "Q2", "Q3", "Q4"]),
-    default="Q4",
-    help="Minimum quartile (if available) for the query results",
-)
-@click.option(
-    "--min-score",
-    type=float,
-    default=0.0,
-    help="Minimum score (if available) for the query results",
-)
-@click.option(
-    "--accuracy",
-    type=float,
-    default=0.8,
-    help="A number between in (0, 1) for accuracy in matching journal names",
-)
-def explorer(
-    ctx: click.core.Context,
-    query: str,
-    database: str,
-    min_quartile: str,
-    min_score: float,
-    accuracy: float,
-) -> None:
-    """
-    Explore local UEFISCDI databases.
-
-    For example, to look at the Article Influence Scores of the Proceedings
-    of the Royal Society, you can call::
-
-        papis explore \\
-            uefiscdi --database ais -q "proceedings royal" \\
-            pick \\
-            cmd 'echo doc[journal]'
-    """
-    from difflib import SequenceMatcher
-
-    query = query.lower()
-
-    def match(entry: dict[str, Any]) -> bool:
-        if not query:
-            return True
-
-        journal = entry["name"].lower()
-        quartile = entry.get("quartile") or min_quartile
-        score = entry.get("score") or min_score
-        if all(q in journal for q in query.split(" ")):
-            journal_match = True
-        else:
-            journal_match = SequenceMatcher(None, query, journal).ratio() > accuracy
-
-        return journal_match and quartile <= min_quartile and float(score) >= min_score
-
-    db = get_uefiscdi_database(database)
-    matches = [entry for entry in db["entries"] if match(entry)]
-    logger.info("Found %s documents.", len(matches))
-
-    ctx.obj["documents"] += [
-        entry_to_papis(match, version=db["version"]) for match in matches
-    ]
+def cli_add(database: str) -> None:
+    """Add UEFISCDI scores and quartiles to documents"""
 
 
 # }}}
