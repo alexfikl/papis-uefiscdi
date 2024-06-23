@@ -10,7 +10,7 @@ This library handles downloading data from the `UEFISCDI <https://uefiscdi.gov.r
 and easy to manipulate format (e.g. CSV). The plugin supports obtaining:
 
 * Journal Impact Factor (JIF) data . At the moment of writing, this data can be
-found `here <https://uefiscdi.gov.ro/scientometrie-reviste>`__.
+  found `here <https://uefiscdi.gov.ro/scientometrie-reviste>`__.
 * Article Influence Score (AIS) data . At the moment of writing, this data can be
   found `here <https://uefiscdi.gov.ro/scientometrie-reviste>`__ or
   `here <https://uefiscdi.gov.ro/scientometrie-baze-de-date>`__
