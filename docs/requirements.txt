@@ -96,7 +96,9 @@ pyperclip==1.9.0
 python-doi==0.2.0
     # via papis
 python-slugify==8.0.4
-    # via papis
+    # via
+    #   papis-uefiscdi (pyproject.toml)
+    #   papis
 pyyaml==6.0.1
     # via papis
 requests==2.32.3

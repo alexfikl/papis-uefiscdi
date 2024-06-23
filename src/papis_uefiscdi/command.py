@@ -250,6 +250,12 @@ def cli(list_databases: bool) -> None:
         click.echo(f"    {description}")
 
 
+# }}}
+
+
+# {{{ index
+
+
 @cli.command("index")
 @click.help_option("--help", "-h")
 @click.option(
@@ -279,6 +285,12 @@ def cli_index(password: str, year: int | None, overwrite: bool) -> None:
         get_uefiscdi_database(
             name, overwrite=overwrite, password=password, version=year
         )
+
+
+# }}}
+
+
+# {{{ search
 
 
 @cli.command("search")
@@ -361,6 +373,12 @@ def cli_search(
     filtered_entries = [db["entries"][d["_id"]] for d in filtered_docs]
 
     click.echo(json.dumps(filtered_entries, indent=2, sort_keys=True))
+
+
+# }}}
+
+
+# {{{ add
 
 
 @cli.command("add")
