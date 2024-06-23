@@ -50,7 +50,7 @@ codespell:		## Run codespell checks over the documentation
 		--skip _build \
 		--uri-ignore-words-list '*' \
 		--ignore-words .codespell-ignore \
-		src test docs
+		src test docs README.rst
 	@echo -e "\e[1;32mcodespell clean!\e[0m"
 .PHONY: codespell
 

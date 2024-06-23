@@ -284,7 +284,6 @@ def parse_uefiscdi_article_influence_score(
 
 # }}}
 
-
 # {{{ Article Influence Score
 
 
