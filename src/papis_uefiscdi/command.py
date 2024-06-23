@@ -392,6 +392,7 @@ def cli_search(
 )
 def cli_add(database: str) -> None:
     """Add UEFISCDI scores and quartiles to documents"""
+    logger.error("Not implemented yet. :(")
 
 
 # }}}
