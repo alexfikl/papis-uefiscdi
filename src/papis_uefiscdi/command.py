@@ -408,11 +408,15 @@ def cli_search(
 
     from papis.pick import pick_doc
 
-    filtered_docs = sorted(
-        filtered_docs,
-        key=lambda d: d[sort_field] or (0.0 if sort_field == "score" else "ZZZ"),
-        reverse=sort_reverse,
-    )
+    def key_func(d: papis.document.Document) -> str | float | int:
+        field = d[sort_field]
+        if field is None:
+            return 0.0 if sort_field == "score" else "ZZ"
+        else:
+            assert isinstance(field, (str, float, int))
+            return field
+
+    filtered_docs = sorted(filtered_docs, key=key_func, reverse=sort_reverse)
     filtered_docs = [entry for entry in pick_doc(filtered_docs) if entry]
     filtered_entries = [db["entries"][d["_id"]] for d in filtered_docs]
 
