@@ -410,7 +410,7 @@ def cli_search(
 
     filtered_docs = sorted(
         filtered_docs,
-        key=lambda d: d.get(sort_field, "ZZZ"),
+        key=lambda d: d[sort_field] or (0.0 if sort_field == "score" else "ZZZ"),
         reverse=sort_reverse,
     )
     filtered_docs = [entry for entry in pick_doc(filtered_docs) if entry]
