@@ -7,21 +7,19 @@ import pathlib
 import re
 from typing import Iterator, TypedDict
 
-import papis.logging
+from papis_uefiscdi.config import INDEX_ID_TO_NAME
 
-logger = papis.logging.get_logger(__name__)
+try:
+    import papis.logging
+
+    logger = papis.logging.get_logger(__name__)
+except ImportError:
+    import logging
+
+    logger = logging.getLogger(__name__)
 
 
 # {{{ utils
-
-INDEX_ID_TO_NAME = {
-    "AHCI": "Arts Humanities Citation Index",
-    "SCIE": "Science Citation Index Expanded",
-    "SSCI": "Social Sciences Citation Index",
-}
-"""A mapping of indexes (as they appear in the UEFISCDI databases) to their
-full names.
-"""
 
 
 class Entry(TypedDict):

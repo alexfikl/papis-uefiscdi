@@ -14,35 +14,26 @@ import papis.config
 import papis.document
 import papis.logging
 import papis.strings
+from papis_uefiscdi.config import (
+    INDEX_ID_TO_NAME,
+    UEFISCDI_DATABASE_URL,
+    UEFISCDI_SUPPORTED_DATABASES,
+)
 
 logger = papis.logging.get_logger(__name__)
 
 # {{{ utils
 
-UEFISCDI_SUPPORTED_DATABASES = {
-    "aisq": "Article Influence Score (Quartiles)",
-    "jifq": "Journal Impact Factor (Quartiles)",
-    "ais": "Article Influence Score (Scores)",
-    "ris": "Relative Influence Score (Scores)",
-    "rif": "Relative Impact Factor (Scores)",
-}
-
-UEFISCDI_DATABASE_TO_KEY = {
-    "aisq": "uefiscdi_ais_quartile",
-    "jifq": "uefiscdi_jif_quartile",
-    "ais": "uefiscdi_ais_score",
-    "ris": "uefiscdi_ris_score",
-    "rif": "uefiscdi_rif_score",
-}
+UEFISCDI_DATABASE_YEAR = 2023
 
 papis.config.register_default_settings({
     "uefiscdi": {
-        "version": 2023,
-        "aisq-url": "https://uefiscdi.gov.ro/resource-866007-zone.iunie.2023.ais.pdf",
-        "jifq-url": "https://uefiscdi.gov.ro/resource-866009-zone.iunie.2023.jif.pdf",
-        "ais-url": "https://uefiscdi.gov.ro/resource-863884-ais_2022.xlsx",
-        "rif-url": "https://uefiscdi.gov.ro/resource-863887-rif_2022.xlsx",
-        "ris-url": "https://uefiscdi.gov.ro/resource-863882-ris_2022.xlsx",
+        "version": UEFISCDI_DATABASE_YEAR,
+        "aisq-url": UEFISCDI_DATABASE_URL[UEFISCDI_DATABASE_YEAR]["aisq"],
+        "jifq-url": UEFISCDI_DATABASE_URL[UEFISCDI_DATABASE_YEAR]["jifq"],
+        "ais-url": UEFISCDI_DATABASE_URL[UEFISCDI_DATABASE_YEAR]["ais"],
+        "rif-url": UEFISCDI_DATABASE_URL[UEFISCDI_DATABASE_YEAR]["rif"],
+        "ris-url": UEFISCDI_DATABASE_URL[UEFISCDI_DATABASE_YEAR]["ris"],
         "password": "uefiscdi",
     }
 })
@@ -299,8 +290,8 @@ def cli_index(password: str, year: int | None, overwrite: bool) -> None:
 @click.option(
     "-d",
     "--database",
-    required=True,
-    type=click.Choice(list(UEFISCDI_SUPPORTED_DATABASES)),
+    type=click.Choice(list(UEFISCDI_SUPPORTED_DATABASES), case_sensitive=False),
+    default="ais",
     help="Database to search for scores",
 )
 @click.option(
@@ -316,23 +307,53 @@ def cli_index(password: str, year: int | None, overwrite: bool) -> None:
     help="A Web of Science category to restrict the results to",
 )
 @click.option(
+    "-i",
+    "--index",
+    type=click.Choice(list(INDEX_ID_TO_NAME), case_sensitive=False),
+    help="Web of Science citation index identifier",
+)
+@click.option(
     "-q",
     "--quartile",
     default=None,
     type=int,
     help="Minimum quartile to display",
 )
+@click.option(
+    "--sort",
+    "sort_field",
+    default="name",
+    help="Sort results with respect to the FIELD",
+    metavar="FIELD",
+)
+@click.option(
+    "--reverse",
+    "sort_reverse",
+    flag_value=False,
+    default=True,
+    is_flag=True,
+    help="List all known databases and their descriptions",
+)
 def cli_search(
     query: str,
     database: str,
     year: int | None,
     category: str | None,
+    index: str | None,
     quartile: int | None,
+    sort_field: str,
+    sort_reverse: bool,
 ) -> None:
     """Search UEFISCDI databases"""
 
     if year is None:
         year = papis.config.get("version", section="uefiscdi")
+
+    if category is not None:
+        category = category.lower()
+
+    if index is not None:
+        index = index.lower()
 
     assert year is not None
 
@@ -340,10 +361,13 @@ def cli_search(
         e_category = entry.get("category")
         in_category = not category or (e_category and category in e_category.lower())
 
+        e_index = entry.get("index")
+        in_index = not index or (e_index and index == e_index.lower())
+
         e_quartile = entry.get("quartile")
         in_quartile = not quartile or (not e_quartile or quartile >= int(e_quartile[1]))
 
-        return bool(in_category and in_quartile)
+        return bool(in_category and in_index and in_quartile)
 
     db = load_uefiscdi_database(database, year)
     docs = [
@@ -369,6 +393,11 @@ def cli_search(
 
     from papis.pick import pick_doc
 
+    filtered_docs = sorted(
+        filtered_docs,
+        key=lambda d: d.get(sort_field, "ZZZ"),
+        reverse=sort_reverse,
+    )
     filtered_docs = [entry for entry in pick_doc(filtered_docs) if entry]
     filtered_entries = [db["entries"][d["_id"]] for d in filtered_docs]
 
@@ -386,7 +415,7 @@ def cli_search(
 @click.option(
     "-d",
     "--database",
-    type=click.Choice(list(UEFISCDI_SUPPORTED_DATABASES)),
+    type=click.Choice(list(UEFISCDI_SUPPORTED_DATABASES), case_sensitive=False),
     default="ais",
     help="Database to search for scores",
 )
