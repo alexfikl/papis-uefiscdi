@@ -71,15 +71,30 @@ def get_uefiscdi_database(
     password: str | None = None,
     version: int | None = None,
 ) -> dict[str, Any]:
+    config_version = papis.config.getint("version", section="uefiscdi")
+
     if version is None:
-        version = papis.config.getint("version", section="uefiscdi")
+        version = config_version
 
     assert version is not None
+
+    if version == config_version:
+        url = None
+    else:
+        if version not in UEFISCDI_DATABASE_URL:
+            logger.error(
+                "Cannot determine URL for the '%s' database from '%s'",
+                database,
+                version,
+            )
+            return {}
+
+        url = UEFISCDI_DATABASE_URL[version][database]
 
     filename = get_uefiscdi_database_path(database, version)
     if not filename.exists() or overwrite:
         try:
-            db = parse_uefiscdi(database, password=password, version=version)
+            db = parse_uefiscdi(database, url, password=password, version=version)
         except Exception as exc:
             logger.error(
                 "Could not parse UEFISCDI database '%s'", database, exc_info=exc
