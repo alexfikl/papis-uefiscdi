@@ -124,9 +124,9 @@ def run(
             cmd.insert(0, "nohup")
 
         logger.debug("Not waiting for process to finish.")
-        subprocess.Popen(
+        subprocess.Popen(  # noqa: S603
             cmd,
-            shell=False,  # noqa: S603
+            shell=False,
             cwd=cwd,
             env=env,
             stdin=None,
