@@ -1,8 +1,5 @@
-import os
-import sys
-
-# NOTE: seems necessary for readthedocs.org because it doesn't `pip install -e`
-sys.path.insert(0, os.path.abspath(".."))
+# SPDX-FileCopyrightText: 2020-2024 Alexandru Fikl <alexfikl@gmail.com>
+# SPDX-License-Identifier: CC0-1.0
 
 # {{{ Project information
 
