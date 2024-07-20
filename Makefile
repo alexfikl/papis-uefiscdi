@@ -11,16 +11,16 @@ help: 			## Show this help
 
 # {{{ linting
 
-format: black isort pyproject				## Run all formatting scripts
+format: pyproject isort black				## Run all formatting scripts
 .PHONY: format
 
 fmt: format
 .PHONY: fmt
 
-black:			## Run ruff format over the source code
-	ruff format src test docs
-	@echo -e "\e[1;32mruff format clean!\e[0m"
-.PHONY: black
+pyproject:		## Run pyproject-fmt over the configuration
+	$(PYTHON) -m pyproject_fmt --indent 4 pyproject.toml
+	@echo -e "\e[1;32mpyproject clean!\e[0m"
+.PHONY: pyproject
 
 isort:			## Run ruff isort fixes over the source code
 	ruff check --fix --select=I src test docs
@@ -28,12 +28,22 @@ isort:			## Run ruff isort fixes over the source code
 	@echo -e "\e[1;32mruff isort clean!\e[0m"
 .PHONY: isort
 
-pyproject:		## Run pyproject-fmt over the configuration
-	$(PYTHON) -m pyproject_fmt --indent 4 pyproject.toml
-	@echo -e "\e[1;32mpyproject clean!\e[0m"
-.PHONY: pyproject
+black:			## Run ruff format over the source code
+	ruff format src test docs
+	@echo -e "\e[1;32mruff format clean!\e[0m"
+.PHONY: black
 
-lint: ruff reuse codespell mypy				## Run all linting checks
+lint: typos reuse ruff mypy				## Run all linting checks
+
+typos:			## Run typos over the source code and documentation
+	@typos
+	@echo -e "\e[1;32mtypos clean!\e[0m"
+.PHONY: typos
+
+reuse:			## Check REUSE license compliance
+	$(PYTHON) -m reuse lint
+	@echo -e "\e[1;32mREUSE compliant!\e[0m"
+.PHONY: reuse
 
 ruff:			## Run ruff checks over the source code
 	ruff check src test
@@ -44,20 +54,6 @@ mypy:			## Run mypy checks over the source code
 	$(PYTHON) -m mypy src test
 	@echo -e "\e[1;32mmypy (strict) clean!\e[0m"
 .PHONY: mypy
-
-codespell:		## Run codespell checks over the documentation
-	@codespell --summary \
-		--skip _build \
-		--uri-ignore-words-list '*' \
-		--ignore-words .codespell-ignore \
-		src test docs README.rst
-	@echo -e "\e[1;32mcodespell clean!\e[0m"
-.PHONY: codespell
-
-reuse:			## Check REUSE license compliance
-	$(PYTHON) -m reuse lint
-	@echo -e "\e[1;32mREUSE compliant!\e[0m"
-.PHONY: reuse
 
 # }}}
 
@@ -88,7 +84,7 @@ docs/requirements.txt: pyproject.toml
 pin: $(REQUIREMENTS) 	## Pin dependencies versions to requirements.txt
 .PHONY: pin
 
-pip-install:	## Install pinned depdencies from requirements.txt
+pip-install:			## Install pinned dependencies from requirements.txt
 	$(PYTHON) -m pip install --upgrade pip hatchling wheel
 	$(PYTHON) -m pip install -r requirements-dev.txt -e .
 .PHONY: pip-install
@@ -110,3 +106,12 @@ ctags:			## Regenerate ctags
 		--python-kinds=-i \
 		--language-force=python
 .PHONY: ctags
+
+clean:						## Remove various build artifacts
+	rm -rf build dist
+	rm -rf docs/_build
+.PHONY: clean
+
+purge: clean				## Remove various temporary files
+	rm -rf .ruff_cache .pytest_cache .mypy_cache
+.PHONY: purge
