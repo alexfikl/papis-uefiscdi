@@ -6,7 +6,7 @@ alabaster==0.7.16
     # via sphinx
 arxiv2bib==1.0.8
     # via papis
-babel==2.15.0
+babel==2.16.0
     # via
     #   pydata-sphinx-theme
     #   sphinx
@@ -16,9 +16,9 @@ beautifulsoup4==4.12.3
     #   pydata-sphinx-theme
 bibtexparser==1.4.1
     # via papis
-certifi==2024.7.4
+certifi==2024.8.30
     # via requests
-cffi==1.16.0
+cffi==1.17.1
     # via cryptography
 chardet==5.2.0
     # via papis
@@ -30,7 +30,7 @@ click==8.1.7
     #   sphinx-click
 colorama==0.4.6
     # via papis
-cryptography==42.0.8
+cryptography==43.0.1
     # via msoffcrypto-tool
 docutils==0.21.2
     # via
@@ -45,21 +45,21 @@ filetype==1.2.0
     # via papis
 habanero==1.2.6
     # via papis
-idna==3.7
+idna==3.8
     # via requests
 imagesize==1.4.1
     # via sphinx
-importlib-metadata==8.0.0
+importlib-metadata==8.4.0
     # via sphinx
 isbnlib==3.10.14
     # via papis
 jinja2==3.1.4
     # via sphinx
-lxml==5.2.2
+lxml==5.3.0
     # via papis
 markupsafe==2.1.5
     # via jinja2
-msoffcrypto-tool==5.4.1
+msoffcrypto-tool==5.4.2
     # via papis-uefiscdi (pyproject.toml)
 olefile==0.47
     # via msoffcrypto-tool
@@ -71,9 +71,9 @@ packaging==24.1
     #   sphinx
 papis==0.13
     # via papis-uefiscdi (pyproject.toml)
-pbr==6.0.0
+pbr==6.1.0
     # via stevedore
-platformdirs==4.2.2
+platformdirs==4.3.1
     # via papis-uefiscdi (pyproject.toml)
 prompt-toolkit==3.0.47
     # via papis
@@ -87,11 +87,11 @@ pygments==2.18.0
     #   papis
     #   pydata-sphinx-theme
     #   sphinx
-pyparsing==3.1.2
+pyparsing==3.1.4
     # via
     #   bibtexparser
     #   papis
-pypdf==4.3.0
+pypdf==4.3.1
     # via papis-uefiscdi (pyproject.toml)
 pyperclip==1.9.0
     # via papis-uefiscdi (pyproject.toml)
@@ -101,7 +101,7 @@ python-slugify==8.0.4
     # via
     #   papis-uefiscdi (pyproject.toml)
     #   papis
-pyyaml==6.0.1
+pyyaml==6.0.2
     # via papis
 requests==2.32.3
     # via
@@ -110,9 +110,9 @@ requests==2.32.3
     #   sphinx
 snowballstemmer==2.2.0
     # via sphinx
-soupsieve==2.5
+soupsieve==2.6
     # via beautifulsoup4
-sphinx==7.4.6
+sphinx==7.4.7
     # via
     #   papis-uefiscdi (pyproject.toml)
     #   pydata-sphinx-theme
@@ -122,19 +122,19 @@ sphinx-book-theme==1.1.3
     # via papis-uefiscdi (pyproject.toml)
 sphinx-click==6.0.0
     # via papis-uefiscdi (pyproject.toml)
-sphinxcontrib-applehelp==1.0.8
+sphinxcontrib-applehelp==2.0.0
     # via sphinx
-sphinxcontrib-devhelp==1.0.6
+sphinxcontrib-devhelp==2.0.0
     # via sphinx
-sphinxcontrib-htmlhelp==2.0.5
+sphinxcontrib-htmlhelp==2.1.0
     # via sphinx
 sphinxcontrib-jsmath==1.0.1
     # via sphinx
-sphinxcontrib-qthelp==1.0.7
+sphinxcontrib-qthelp==2.0.0
     # via sphinx
-sphinxcontrib-serializinghtml==1.1.10
+sphinxcontrib-serializinghtml==2.0.0
     # via sphinx
-stevedore==5.2.0
+stevedore==5.3.0
     # via papis
 text-unidecode==1.3
     # via python-slugify
@@ -142,7 +142,7 @@ titlecase==2.4.1
     # via papis-uefiscdi (pyproject.toml)
 tomli==2.0.1
     # via sphinx
-tqdm==4.66.4
+tqdm==4.66.5
     # via
     #   habanero
     #   papis
@@ -155,5 +155,5 @@ urllib3==2.2.2
     # via requests
 wcwidth==0.2.13
     # via prompt-toolkit
-zipp==3.19.2
+zipp==3.20.1
     # via importlib-metadata
