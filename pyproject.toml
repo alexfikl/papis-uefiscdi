@@ -6,7 +6,7 @@ requires = [
 
 [project]
 name = "papis-uefiscdi"
-version = "0.1.0"
+version = "0.2.0"
 description = "Some simple plugins for papis"
 readme = "README.rst"
 keywords = [
@@ -19,7 +19,7 @@ maintainers = [
 authors = [
     { name = "Alexandru Fikl", email = "alexfikl@gmail.com" },
 ]
-requires-python = ">=3.9"
+requires-python = ">=3.10"
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Environment :: Console",
@@ -30,10 +30,10 @@ classifiers = [
     "Operating System :: POSIX",
     "Operating System :: Unix",
     "Programming Language :: Python :: 3 :: Only",
-    "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
     "Topic :: Utilities",
 ]
 dependencies = [
@@ -130,6 +130,7 @@ lint.isort.known-first-party = [
 
 [tool.mypy]
 strict = true
+python_version = "3.10"
 hide_error_codes = false
 warn_unused_ignores = true
 
