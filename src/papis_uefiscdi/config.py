@@ -36,6 +36,13 @@ UEFISCDI_DATABASE_TO_KEY = {
 # NOTE: This mostly has the last 5 years, since those are required for UEFISCDI
 # competitions.
 UEFISCDI_DATABASE_URL = {
+    2024: {
+        "aisq": "https://uefiscdi.gov.ro/resource-861733-JCR.iunie.2024.pdf",
+        "jifq": "https://uefiscdi.gov.ro/resource-861733-JCR.iunie.2024.pdf",
+        "ais": "https://uefiscdi.gov.ro/resource-861731-AIS.JCR2023.iunie2024.xlsx",
+        "ris": "https://uefiscdi.gov.ro/resource-861773-RIS.2023iunie2024.xlsx",
+        "rif": "https://uefiscdi.gov.ro/resource-861735-FIR.2023iunie2024.xlsx",
+    },
     2023: {
         "aisq": "https://uefiscdi.gov.ro/resource-866007-zone.iunie.2023.ais.pdf",
         "jifq": "https://uefiscdi.gov.ro/resource-866009-zone.iunie.2023.jif.pdf",
