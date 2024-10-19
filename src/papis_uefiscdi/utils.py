@@ -16,23 +16,30 @@ logger = papis.logging.get_logger(__name__)
 
 def download_document(
     url: str,
+    *,
     expected_document_extension: str | None = None,
     cookies: dict[str, Any] | None = None,
+    filename: str | None = None,
 ) -> str | None:
     """Download a document from *url* and store it in a local file.
 
+    An appropriate filename is deduced from the HTTP response in most cases.
+    If this is not possible, a temporary file is created instead. To ensure that
+    the desired filename is chosen, provide the *filename* argument instead.
+
     :param url: the URL of a remote file.
-    :param expected_document_extension: an expected file type. If *None*, then
-        an extension is guessed from the file contents, but this can also fail.
-    :returns: a path to a local file containing the data from *url*.
+    :param expected_document_extension: an expected file extension. If *None*, then
+        an extension is guessed from the file contents or from the *filename*.
+    :param filename: a file name for the document, regardless of the given URL and
+        extension.
+
+    :returns: an absolute path to a local file containing the data from *url*.
     """
     if cookies is None:
         cookies = {}
 
-    from papis.utils import get_session
-
     try:
-        with get_session() as session:
+        with papis.utils.get_session() as session:
             response = session.get(url, cookies=cookies, allow_redirects=True)
     except Exception as exc:
         logger.error("Failed to fetch '%s'.", url, exc_info=exc)
@@ -47,23 +54,66 @@ def download_document(
         )
         return None
 
+    # NOTE: we can guess the filename from the response headers
+    #   Content-Disposition: inline; filename="some_file_name.ext"
+    #   Content-Disposition: attachement; filename="some_file_name.ext"
+    key = "Content-Disposition"
+    if not filename and key in response.headers:
+        from email.message import EmailMessage
+
+        msg = EmailMessage()
+        msg[key] = response.headers[key]
+        filename = msg.get_filename()
+
+    key = "Content-Type"
+    if not filename and key in response.headers:
+        from email.message import EmailMessage
+
+        msg = EmailMessage()
+        msg[key] = response.headers[key]
+
+        from mimetypes import guess_extension
+
+        ext = guess_extension(msg.get_content_type())
+
+        from urllib.parse import urlsplit
+
+        result = urlsplit(url)
+        if result.path.strip("/"):
+            basename = os.path.basename(result.path)
+        else:
+            basename = result.netloc
+        filename = f"{basename}{ext}"
+
+    # try go guess an extension
     ext = expected_document_extension
     if ext is None:
-        from papis.filetype import guess_content_extension
+        if filename is None:
+            from papis.filetype import guess_content_extension
 
-        ext = guess_content_extension(response.content)
-        if not ext:
-            logger.warning(
-                "Downloaded document does not have a "
-                "recognizable (binary) mimetype: '%s'.",
-                response.headers["Content-Type"],
-            )
+            ext = guess_content_extension(response.content)
+            ext = f".{ext}"
+        else:
+            _, ext = os.path.splitext(filename)
+    else:
+        if not ext.startswith("."):
+            ext = f".{ext}"
 
-    ext = f".{ext}" if ext else ""
-    with tempfile.NamedTemporaryFile(mode="wb+", suffix=ext, delete=False) as f:
-        f.write(response.content)
+    # write out the file contents
+    if filename:
+        root, _ = os.path.splitext(os.path.basename(filename))
+        outfile = os.path.join(tempfile.gettempdir(), f"{root}{ext}")
 
-    return f.name
+        with open(outfile, mode="wb") as f:
+            f.write(response.content)
+    else:
+        with tempfile.NamedTemporaryFile(
+            mode="wb+", suffix=f"{ext}", delete=False
+        ) as f:
+            f.write(response.content)
+            outfile = f.name
+
+    return outfile
 
 
 def run(
