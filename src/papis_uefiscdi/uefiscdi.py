@@ -4,19 +4,13 @@
 from __future__ import annotations
 
 import pathlib
-import re
 from typing import Iterator, TypedDict
 
-from papis_uefiscdi.config import INDEX_ID_TO_NAME
+from papis_uefiscdi.logging import get_logger
 
-try:
-    import papis.logging
+log = get_logger(__name__)
 
-    logger = papis.logging.get_logger(__name__)
-except ImportError:
-    import logging
-
-    logger = logging.getLogger(__name__)
+_SUPPORTED_VERSIONS = {2023, 2024}
 
 
 # {{{ utils
@@ -72,85 +66,9 @@ def stringify(entry: Entry, database: str) -> str:
 # {{{ Journal Impact Factor
 
 
-_SUPPORTED_VERSIONS = {2023}
-
-_SUPPORTED_QUARTILES = {"Q1", "Q2", "Q3", "Q4", "N/A"}
-
-_ISSN_RE = re.compile(r"\w{4}-\w{4}|N/A")
-
-
 def window(iterable: list[str]) -> Iterator[tuple[tuple[str, str], str]]:
     for i, x in enumerate(iterable[2:]):
         yield (iterable[i], iterable[i + 1]), x
-
-
-def _parse_jif_zone_entry_2023(before: tuple[str, str], current: str) -> Entry | None:
-    """Row format is given as
-
-        WOS_CATEGORY - INDEX | JOURNAL | ISSN | EISSN | QUARTILE | POSITION
-
-    where
-
-    * *INDEX* is a four letter citation index database name.
-    * *ISSN* is has a format of ``XXXX-XXXX`` and can also be *N/A*.
-    * *EISSN* is the same as *ISSN*.
-    * *QUARTILE* is one of *Q1, Q2, Q3, Q4* but can also be *N/A*.
-    * *POSITION* is a single integer.
-    """
-    if " " not in current:
-        return None
-
-    rest, position = current.rsplit(" ", maxsplit=1)
-
-    if not position.isdigit():
-        return None
-
-    rest, quartile = rest.rsplit(" ", maxsplit=1)
-    quartile = quartile.upper()
-
-    if quartile not in _SUPPORTED_QUARTILES:
-        return None
-
-    rest, eissn = rest.rsplit(" ", maxsplit=1)
-    eissn = eissn.strip().upper()
-
-    if not _ISSN_RE.match(eissn):
-        return None
-
-    rest, issn = rest.rsplit(" ", maxsplit=1)
-    issn = issn.strip().upper()
-
-    if not _ISSN_RE.match(issn):
-        return None
-
-    if " - " not in rest:
-        # NOTE: some entries are multiline, so we try to guess
-        # * add the -1 line and see if it contains a -
-        # * add the -2 line too if it does not end in a digit (for the position)
-        rest = f"{before[1]} {rest}"
-        if " - " not in rest or (not before[0][-1].isdigit() and before[0][0] != "Q"):
-            rest = f"{before[0]} {rest}"
-
-    # NOTE: we're now left with WOS_CATEGORY - INDEX JOURNAL
-    category, rest = rest.split(" - ", maxsplit=1)
-    index = rest[:4]
-    journal = rest[4:]
-
-    if index not in INDEX_ID_TO_NAME:
-        return None
-
-    from titlecase import titlecase
-
-    return Entry(
-        category=titlecase(category.strip()),
-        index=index.upper(),
-        name=titlecase(journal.strip()),
-        issn=None if issn == "N/A" else issn,
-        eissn=None if eissn == "N/A" else eissn,
-        quartile=None if quartile == "N/A" else quartile,
-        position=int(position),
-        score=None,
-    )
 
 
 def parse_uefiscdi_journal_impact_factor(
@@ -174,24 +92,31 @@ def parse_uefiscdi_journal_impact_factor(
 
     import pypdf
 
+    from papis_uefiscdi.pdf import (
+        extract_text,
+        parse_2023_zone_entry,
+        parse_2024_zone_entries,
+    )
+
     with open(filename, "rb") as f:
         pdf = pypdf.PdfReader(f)
 
-        if version == 2023:
-            parse = _parse_jif_zone_entry_2023
-        else:
-            raise AssertionError
-
         results: list[Entry] = []
-        for i, p in enumerate(pdf.pages):
-            lines = [line.strip() for line in p.extract_text().split("\n")]
+        for i, page in enumerate(pdf.pages):
+            lines = [line.text for line in extract_text(page)]
 
-            journals = [
-                journal
-                for before, current in window(lines)
-                if (journal := parse(before, current)) is not None
-            ]
-            logger.debug(
+            if version == 2024:
+                journals = parse_2024_zone_entries(lines, quartile=0)
+            elif version == 2023:
+                journals = [
+                    journal
+                    for before, current in window(lines)
+                    if (journal := parse_2023_zone_entry(before, current)) is not None
+                ]
+            else:
+                raise AssertionError
+
+            log.debug(
                 "Parsing page %4d / %4d. Extracted %d journals for a total of %d",
                 i + 1,
                 len(pdf.pages),
@@ -200,7 +125,7 @@ def parse_uefiscdi_journal_impact_factor(
             )
             results.extend(journals)
 
-        logger.info("Extracted %d journals from %d pages", len(results), len(pdf.pages))
+        log.info("Extracted %d journals from %d pages", len(results), len(pdf.pages))
 
     return sorted(
         results,
@@ -215,9 +140,8 @@ def parse_uefiscdi_journal_impact_factor(
 
 # }}}
 
-# {{{ Article Influence Score
 
-_parse_ais_zone_entry_2023 = _parse_jif_zone_entry_2023
+# {{{ Article Influence Score
 
 
 def parse_uefiscdi_article_influence_score(
@@ -241,24 +165,31 @@ def parse_uefiscdi_article_influence_score(
 
     import pypdf
 
+    from papis_uefiscdi.pdf import (
+        extract_text,
+        parse_2023_zone_entry,
+        parse_2024_zone_entries,
+    )
+
     with open(filename, "rb") as f:
         pdf = pypdf.PdfReader(f)
 
-        if version == 2023:
-            parse = _parse_ais_zone_entry_2023
-        else:
-            raise AssertionError
-
         results: list[Entry] = []
-        for i, p in enumerate(pdf.pages):
-            lines = [line.strip() for line in p.extract_text().split("\n")]
+        for i, page in enumerate(pdf.pages):
+            lines = [line.text for line in extract_text(page)]
 
-            journals = [
-                journal
-                for before, current in window(lines)
-                if (journal := parse(before, current)) is not None
-            ]
-            logger.debug(
+            if version == 2024:
+                journals = parse_2024_zone_entries(lines, quartile=1)
+            elif version == 2023:
+                journals = [
+                    journal
+                    for before, current in window(lines)
+                    if (journal := parse_2023_zone_entry(before, current)) is not None
+                ]
+            else:
+                raise AssertionError
+
+            log.debug(
                 "Parsing page %4d / %4d. Extracted %d journals for a total of %d",
                 i + 1,
                 len(pdf.pages),
@@ -267,7 +198,7 @@ def parse_uefiscdi_article_influence_score(
             )
             results.extend(journals)
 
-        logger.info("Extracted %d journals from %d pages", len(results), len(pdf.pages))
+        log.info("Extracted %d journals from %d pages", len(results), len(pdf.pages))
 
     return sorted(
         results,
@@ -307,7 +238,7 @@ def _parse_ais_score_entries_2023(filename: pathlib.Path) -> list[Entry]:
 
     wb = openpyxl.load_workbook(filename, read_only=True)
     if wb is None:
-        logger.error("Could not load workbook.")
+        log.error("Could not load workbook.")
         return []
 
     rows = wb.active.rows  # type: ignore[union-attr]
@@ -386,7 +317,7 @@ def parse_uefiscdi_article_influence_scores(
     else:
         raise AssertionError
 
-    logger.info("Extracted %d journals from '%s'", len(results), filename)
+    log.info("Extracted %d journals from '%s'", len(results), filename)
     return results
 
 
@@ -423,7 +354,7 @@ def parse_uefiscdi_relative_influence_scores(
     else:
         raise AssertionError
 
-    logger.info("Extracted %d journals from '%s'", len(results), filename)
+    log.info("Extracted %d journals from '%s'", len(results), filename)
     return results
 
 
@@ -460,7 +391,7 @@ def parse_uefiscdi_relative_impact_factors(
     else:
         raise AssertionError
 
-    logger.info("Extracted %d journals from '%s'", len(results), filename)
+    log.info("Extracted %d journals from '%s'", len(results), filename)
     return results
 
 

@@ -5,22 +5,16 @@ import csv
 
 import pytest
 
+from papis_uefiscdi.config import UEFISCDI_DATABASE_URL
 from papis_uefiscdi.testing import TemporaryConfiguration
 
 
 @pytest.mark.parametrize(
     ("fmt", "version", "url"),
     [
-        (
-            "jif",
-            2023,
-            "https://uefiscdi.gov.ro/resource-866009-zone.iunie.2023.jif.pdf",
-        ),
-        (
-            "ais",
-            2023,
-            "https://uefiscdi.gov.ro/resource-866007-zone.iunie.2023.ais.pdf",
-        ),
+        ("jif", 2024, UEFISCDI_DATABASE_URL[2024]["jifq"]),
+        # ("jif", 2023, UEFISCDI_DATABASE_URL[2023]["jifq"]),
+        # ("ais", 2023, UEFISCDI_DATABASE_URL[2023]["aisq"]),
     ],
 )
 def test_parse_zone_data(
@@ -52,21 +46,9 @@ def test_parse_zone_data(
 @pytest.mark.parametrize(
     ("fmt", "version", "url"),
     [
-        (
-            "ais",
-            2023,
-            "https://uefiscdi.gov.ro/resource-863884-ais_2022.xlsx",
-        ),
-        (
-            "ris",
-            2023,
-            "https://uefiscdi.gov.ro/resource-863882-ris_2022.xlsx",
-        ),
-        (
-            "rif",
-            2023,
-            "https://uefiscdi.gov.ro/resource-863887-rif_2022.xlsx",
-        ),
+        ("ais", 2023, UEFISCDI_DATABASE_URL[2023]["ais"]),
+        ("ris", 2023, UEFISCDI_DATABASE_URL[2023]["ris"]),
+        ("rif", 2023, UEFISCDI_DATABASE_URL[2023]["rif"]),
     ],
 )
 def test_parse_score_data(

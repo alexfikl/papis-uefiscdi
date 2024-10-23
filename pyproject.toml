@@ -37,14 +37,13 @@ classifiers = [
     "Topic :: Utilities",
 ]
 dependencies = [
-    "msoffcrypto-tool",
-    "openpyxl",
-    "papis>=0.13",
-    "platformdirs",
-    "pypdf",
-    "pyperclip",
-    "python-slugify",
-    "titlecase",
+    "msoffcrypto-tool>=5",
+    "openpyxl>=3.1",
+    "platformdirs>=4",
+    "pypdf>=5",
+    "pyperclip>=1",
+    "requests>=2.32",
+    "titlecase>=2.4",
 ]
 optional-dependencies.dev = [
     "mypy",
@@ -53,7 +52,6 @@ optional-dependencies.dev = [
     "ruff",
     "types-beautifulsoup4",
     "types-openpyxl",
-    "types-python-slugify",
     "types-pyyaml",
     "types-requests",
     "typos",
@@ -63,6 +61,9 @@ optional-dependencies.docs = [
     "sphinx",
     "sphinx-book-theme",
     "sphinx-click",
+]
+optional-dependencies.papis = [
+    "papis>=0.13",
 ]
 urls.Repository = "https://github.com/alexfikl/papis-uefiscdi"
 entry-points."papis.command".uefiscdi = "papis_uefiscdi.command:cli"
@@ -104,6 +105,7 @@ lint.select = [
     "W",   # flake8
 ]
 lint.ignore = [
+    "A005",    # shadowing-builtin-module
     "E402",    # module-import-not-at-top-of-file
     "FBT001",  # boolean
     "ISC001",  # single-line-implicit-string-concatenation

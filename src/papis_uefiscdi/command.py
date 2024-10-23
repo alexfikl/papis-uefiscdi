@@ -19,21 +19,22 @@ from papis_uefiscdi.config import (
     UEFISCDI_DATABASE_URL,
     UEFISCDI_SUPPORTED_DATABASES,
 )
+from papis_uefiscdi.logging import get_logger
 
-logger = papis.logging.get_logger(__name__)
+log = get_logger(__name__)
 
 # {{{ utils
 
-UEFISCDI_DATABASE_YEAR = 2023
+UEFISCDI_DATABASE_YEAR = 2024
 
 papis.config.register_default_settings({
     "uefiscdi": {
         "version": UEFISCDI_DATABASE_YEAR,
-        "aisq-url": UEFISCDI_DATABASE_URL[UEFISCDI_DATABASE_YEAR]["aisq"],
-        "jifq-url": UEFISCDI_DATABASE_URL[UEFISCDI_DATABASE_YEAR]["jifq"],
-        "ais-url": UEFISCDI_DATABASE_URL[UEFISCDI_DATABASE_YEAR]["ais"],
-        "rif-url": UEFISCDI_DATABASE_URL[UEFISCDI_DATABASE_YEAR]["rif"],
-        "ris-url": UEFISCDI_DATABASE_URL[UEFISCDI_DATABASE_YEAR]["ris"],
+        "aisq-url": "",
+        "jifq-url": "",
+        "ais-url": "",
+        "rif-url": "",
+        "ris-url": "",
         "password": "uefiscdi",
     }
 })
@@ -52,11 +53,11 @@ def load_uefiscdi_database(database: str, version: int | None = None) -> dict[st
 
     filename = get_uefiscdi_database_path(database, version)
     if not filename.exists():
-        logger.error("File for database '%s' does not exist: '%s'", database, filename)
-        logger.error("Run 'papis uefiscdi index -d %s' to download it.", database)
+        log.error("File for database '%s' does not exist: '%s'", database, filename)
+        log.error("Run 'papis uefiscdi index -d %s' to download it.", database)
         return {}
 
-    logger.info("Database loaded from '%s'.", filename)
+    log.info("Database loaded from '%s'.", filename)
 
     with open(filename, encoding="utf-8") as inf:
         db = json.load(inf)
@@ -82,7 +83,7 @@ def get_uefiscdi_database(
         url = None
     else:
         if version not in UEFISCDI_DATABASE_URL:
-            logger.error(
+            log.error(
                 "Cannot determine URL for the '%s' database from '%s'",
                 database,
                 version,
@@ -96,9 +97,7 @@ def get_uefiscdi_database(
         try:
             db = parse_uefiscdi(database, url, password=password, version=version)
         except Exception as exc:
-            logger.error(
-                "Could not parse UEFISCDI database '%s'", database, exc_info=exc
-            )
+            log.error("Could not parse UEFISCDI database '%s'", database, exc_info=exc)
             return {}
 
         if not filename.parent.exists():
@@ -107,9 +106,9 @@ def get_uefiscdi_database(
         with open(filename, "w", encoding="utf-8") as outf:
             json.dump(db, outf, indent=2, sort_keys=False)
 
-        logger.info("Database saved in '%s'.", filename)
+        log.info("Database saved in '%s'.", filename)
     else:
-        logger.info("Database loaded from '%s'.", filename)
+        log.info("Database loaded from '%s'.", filename)
 
         with open(filename, encoding="utf-8") as inf:
             db = json.load(inf)
@@ -134,11 +133,21 @@ def parse_uefiscdi(
         raise ValueError(f"Unknown database '{database}'")
 
     if url is None:
-        url = papis.config.getstring(f"{database}-url", section="uefiscdi")
+        name = f"{database}-url"
+        url = papis.config.getstring(name, section="uefiscdi")
+        if not url:
+            if version in UEFISCDI_DATABASE_URL:
+                url = UEFISCDI_DATABASE_URL[version][name]
+            else:
+                raise ValueError(
+                    "'url' not provided and could not determine a default one: "
+                    f"given version '{version}' is not known. Set 'uefiscdi-{name}' "
+                    "in your configuration file to provide a default URL."
+                )
 
     from papis_uefiscdi.utils import download_document
 
-    logger.info("Getting data from '%s'.", url)
+    log.info("Getting data from '%s'.", url)
     filename = download_document(
         url,
         expected_document_extension=pathlib.Path(url).suffix[1:],
@@ -146,7 +155,7 @@ def parse_uefiscdi(
     if filename is None:
         raise FileNotFoundError(url)
 
-    logger.info("Downloaded file at '%s'.", filename)
+    log.info("Downloaded file at '%s'.", filename)
 
     if password is None:
         password = papis.config.get("password", section="uefiscdi")
@@ -440,7 +449,7 @@ def cli_search(
 )
 def cli_add(database: str) -> None:
     """Add UEFISCDI scores and quartiles to documents"""
-    logger.error("Not implemented yet. :(")
+    log.error("Not implemented yet. :(")
 
 
 # }}}

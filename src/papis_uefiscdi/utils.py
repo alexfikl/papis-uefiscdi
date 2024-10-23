@@ -7,11 +7,25 @@ from __future__ import annotations
 import os
 import sys
 import tempfile
-from typing import Any, Sequence
+from typing import TYPE_CHECKING, Any, Sequence
 
-import papis.logging
+from papis_uefiscdi.logging import get_logger
 
-logger = papis.logging.get_logger(__name__)
+if TYPE_CHECKING:
+    import requests
+
+log = get_logger(__name__)
+
+
+def get_session() -> requests.Session:
+    try:
+        import papis.utils
+
+        return papis.utils.get_session()
+    except ImportError:
+        import requests
+
+        return requests.Session()
 
 
 def download_document(
@@ -39,14 +53,14 @@ def download_document(
         cookies = {}
 
     try:
-        with papis.utils.get_session() as session:
+        with get_session() as session:
             response = session.get(url, cookies=cookies, allow_redirects=True)
     except Exception as exc:
-        logger.error("Failed to fetch '%s'.", url, exc_info=exc)
+        log.error("Failed to fetch '%s'.", url, exc_info=exc)
         return None
 
     if not response.ok:
-        logger.error(
+        log.error(
             "Could not download document '%s'. (HTTP status: %s %d).",
             url,
             response.reason,
@@ -56,7 +70,7 @@ def download_document(
 
     # NOTE: we can guess the filename from the response headers
     #   Content-Disposition: inline; filename="some_file_name.ext"
-    #   Content-Disposition: attachement; filename="some_file_name.ext"
+    #   Content-Disposition: attachment; filename="some_file_name.ext"
     key = "Content-Disposition"
     if not filename and key in response.headers:
         from email.message import EmailMessage
@@ -88,14 +102,17 @@ def download_document(
     # try go guess an extension
     ext = expected_document_extension
     if ext is None:
-        if filename is None:
-            from papis.filetype import guess_content_extension
+        try:
+            if filename is None:
+                from papis.filetype import guess_content_extension
 
-            ext = guess_content_extension(response.content)
-            ext = f".{ext}"
-        else:
-            _, ext = os.path.splitext(filename)
-    else:
+                ext = guess_content_extension(response.content)
+                ext = f".{ext}"
+            else:
+                _, ext = os.path.splitext(filename)
+        except ImportError:
+            ext = ".txt"
+    else:  # noqa: PLR5501
         if not ext.startswith("."):
             ext = f".{ext}"
 
@@ -143,9 +160,9 @@ def run(
 
     if cwd:
         cwd = os.path.expanduser(cwd)
-        logger.debug("Changing directory to '%s'.", cwd)
+        log.debug("Changing directory to '%s'.", cwd)
 
-    logger.debug("Running command: '%s'.", cmd)
+    log.debug("Running command: '%s'.", cmd)
 
     # NOTE: detached processes do not fail properly when the command does not
     # exist, so we check for it manually here
@@ -157,7 +174,7 @@ def run(
     import subprocess  # noqa: S404
 
     if wait:
-        logger.debug("Waiting for process to finish.")
+        log.debug("Waiting for process to finish.")
         subprocess.call(cmd, shell=False, cwd=cwd, env=env)  # noqa: S603
     else:
         # NOTE: detach process so that the terminal can be closed without also
@@ -173,7 +190,7 @@ def run(
             platform_kwargs["close_fds"] = True
             cmd.insert(0, "nohup")
 
-        logger.debug("Not waiting for process to finish.")
+        log.debug("Not waiting for process to finish.")
         subprocess.Popen(  # noqa: S603
             cmd,
             shell=False,

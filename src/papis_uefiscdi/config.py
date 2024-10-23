@@ -5,6 +5,7 @@ from __future__ import annotations
 
 INDEX_ID_TO_NAME = {
     "AHCI": "Arts Humanities Citation Index",
+    "ESCI": "Emerging Sources Citation Index",
     "SCIE": "Science Citation Index Expanded",
     "SSCI": "Social Sciences Citation Index",
 }
