@@ -5,7 +5,7 @@ from __future__ import annotations
 
 import json
 import pathlib
-from typing import Any, Match, Pattern
+from typing import Match, Pattern
 
 import click
 
@@ -17,25 +17,26 @@ import papis.strings
 from papis_uefiscdi.config import (
     INDEX_DISPLAY_NAME,
     UEFISCDI_DATABASE_URL,
+    UEFISCDI_DEFAULT_PASSWORD,
+    UEFISCDI_DEFAULT_VERSION,
     UEFISCDI_SUPPORTED_DATABASES,
 )
 from papis_uefiscdi.logging import get_logger
+from papis_uefiscdi.uefiscdi import Database, Entry
 
 log = get_logger(__name__)
 
 # {{{ utils
 
-UEFISCDI_DATABASE_YEAR = 2024
-
 papis.config.register_default_settings({
     "uefiscdi": {
-        "version": UEFISCDI_DATABASE_YEAR,
+        "version": UEFISCDI_DEFAULT_VERSION,
         "aisq-url": "",
         "jifq-url": "",
         "ais-url": "",
         "rif-url": "",
         "ris-url": "",
-        "password": "uefiscdi",
+        "password": UEFISCDI_DEFAULT_PASSWORD,
     }
 })
 
@@ -45,7 +46,7 @@ def get_uefiscdi_database_path(database: str, version: int) -> pathlib.Path:
     return config_dir / "uefiscdi" / str(version) / f"{database}.json"
 
 
-def load_uefiscdi_database(database: str, version: int | None = None) -> dict[str, Any]:
+def load_uefiscdi_database(database: str, version: int | None = None) -> Database:
     if version is None:
         version = papis.config.getint("version", section="uefiscdi")
 
@@ -55,142 +56,77 @@ def load_uefiscdi_database(database: str, version: int | None = None) -> dict[st
     if not filename.exists():
         log.error("File for database '%s' does not exist: '%s'", database, filename)
         log.error("Run 'papis uefiscdi index -d %s' to download it.", database)
-        return {}
+        return Database(id=database, version=version, url="", entries=[])
 
     log.info("Database loaded from '%s'.", filename)
 
     with open(filename, encoding="utf-8") as inf:
         db = json.load(inf)
 
-    return dict(db)
+    return Database(id=database, version=version, url=db["url"], entries=db["entries"])
 
 
-def get_uefiscdi_database(
+def index_uefiscdi_database(
     database: str,
     *,
     overwrite: bool = False,
     password: str | None = None,
     version: int | None = None,
-) -> dict[str, Any]:
-    config_version = papis.config.getint("version", section="uefiscdi")
+) -> None:
+    if database not in UEFISCDI_SUPPORTED_DATABASES:
+        log.error(
+            "Unknown database '%s'. Supported databases are '%s'.",
+            database,
+            "', '".join(UEFISCDI_SUPPORTED_DATABASES),
+        )
+        return
 
-    if version is None:
-        version = config_version
-
-    assert version is not None
-
-    if version == config_version:
-        url = None
-    else:
-        if version not in UEFISCDI_DATABASE_URL:
-            log.error(
-                "Cannot determine URL for the '%s' database from '%s'",
-                database,
-                version,
-            )
-            return {}
-
-        url = UEFISCDI_DATABASE_URL[version][database]
-
-    filename = get_uefiscdi_database_path(database, version)
-    if not filename.exists() or overwrite:
-        try:
-            db = parse_uefiscdi(database, url, password=password, version=version)
-        except Exception as exc:
-            log.error("Could not parse UEFISCDI database '%s'", database, exc_info=exc)
-            return {}
-
-        if not filename.parent.exists():
-            filename.parent.mkdir()
-
-        with open(filename, "w", encoding="utf-8") as outf:
-            json.dump(db, outf, indent=2, sort_keys=False)
-
-        log.info("Database saved in '%s'.", filename)
-    else:
-        log.info("Database loaded from '%s'.", filename)
-
-        with open(filename, encoding="utf-8") as inf:
-            db = json.load(inf)
-
-    return db
-
-
-def parse_uefiscdi(
-    database: str,
-    url: str | None = None,
-    *,
-    version: int | None = None,
-    password: str | None = None,
-) -> dict[str, Any]:
     if version is None:
         version = papis.config.getint("version", section="uefiscdi")
 
     if version is None:
-        raise ValueError("Could not determine database version")
+        log.error("No version provided. Make sure to set 'uefiscdi-version'.")
+        return
 
-    if database not in UEFISCDI_SUPPORTED_DATABASES:
-        raise ValueError(f"Unknown database '{database}'")
+    filename = get_uefiscdi_database_path(database, version)
+    if filename.exists() and not overwrite:
+        log.info("Database already exists at '%s'", filename)
+        return
 
-    if url is None:
-        name = f"{database}-url"
-        url = papis.config.getstring(name, section="uefiscdi")
-        if not url:
-            if version in UEFISCDI_DATABASE_URL:
-                url = UEFISCDI_DATABASE_URL[version][name]
-            else:
-                raise ValueError(
-                    "'url' not provided and could not determine a default one: "
-                    f"given version '{version}' is not known. Set 'uefiscdi-{name}' "
-                    "in your configuration file to provide a default URL."
-                )
+    url = papis.config.get(f"{database}-url", section="uefiscdi")
+    if not url:
+        if version not in UEFISCDI_DATABASE_URL:
+            log.error(
+                "Unsupported version '%s'. Known versions are %s",
+                version,
+                list(UEFISCDI_DATABASE_URL),
+            )
 
-    from papis_uefiscdi.utils import download_document
+        url = UEFISCDI_DATABASE_URL[version][database]
 
-    log.info("Getting data from '%s'.", url)
-    filename = download_document(
-        url,
-        expected_document_extension=pathlib.Path(url).suffix[1:],
-    )
-    if filename is None:
-        raise FileNotFoundError(url)
+    from papis_uefiscdi.uefiscdi import parse_uefiscdi_database_from_url
 
-    log.info("Downloaded file at '%s'.", filename)
-
-    if password is None:
-        password = papis.config.get("password", section="uefiscdi")
-
-    from papis_uefiscdi import uefiscdi
-
-    entries: list[Any]
-    if database == "aisq":
-        entries = uefiscdi.parse_uefiscdi_article_influence_score_quartile(
-            filename, version=version
+    try:
+        db = parse_uefiscdi_database_from_url(
+            database, url, password=password, version=version
         )
-    elif database == "jifq":
-        entries = uefiscdi.parse_uefiscdi_journal_impact_factor_quartile(
-            filename, version=version
+    except Exception as exc:
+        log.error(
+            "Could not parse UEFISCDI database '%s': '%s'", database, url, exc_info=exc
         )
-    elif database == "ais":
-        entries = uefiscdi.parse_uefiscdi_article_influence_score(
-            filename, version=version, password=password
-        )
-    elif database == "ris":
-        entries = uefiscdi.parse_uefiscdi_relative_influence_score(
-            filename, version=version
-        )
-    elif database == "rif":
-        entries = uefiscdi.parse_uefiscdi_relative_impact_factor(
-            filename, version=version
-        )
-    else:
-        raise ValueError(f"Unknown database name: '{database}'")
+        return
 
-    return {"id": database, "version": version, "url": url, "entries": entries}
+    if not filename.parent.exists():
+        filename.parent.mkdir()
+
+    with open(filename, "w", encoding="utf-8") as outf:
+        json.dump(db, outf, indent=2, sort_keys=False)
+
+    log.info("Database saved in '%s'.", filename)
 
 
 def to_dummy_document(
-    entry: dict[str, Any],
+    entry: Entry,
     *,
     index: int,
     name: str,
@@ -319,7 +255,7 @@ def cli_index(
         UEFISCDI_SUPPORTED_DATABASES if database is None else frozenset([database])
     )
     for name in databases:
-        get_uefiscdi_database(
+        index_uefiscdi_database(
             name, overwrite=overwrite, password=password, version=version
         )
 
@@ -403,7 +339,7 @@ def cli_search(
 
     assert year is not None
 
-    def match(entry: dict[str, Any]) -> bool:
+    def match(entry: Entry) -> bool:
         e_category = entry.get("category")
         in_category = not category or (e_category and category in e_category.lower())
 

@@ -5,6 +5,7 @@
 from __future__ import annotations
 
 import os
+import pathlib
 import sys
 import tempfile
 from typing import TYPE_CHECKING, Any, Sequence
@@ -34,7 +35,7 @@ def download_document(
     expected_document_extension: str | None = None,
     cookies: dict[str, Any] | None = None,
     filename: str | None = None,
-) -> str | None:
+) -> pathlib.Path | None:
     """Download a document from *url* and store it in a local file.
 
     An appropriate filename is deduced from the HTTP response in most cases.
@@ -130,7 +131,7 @@ def download_document(
             f.write(response.content)
             outfile = f.name
 
-    return outfile
+    return pathlib.Path(outfile)
 
 
 def run(

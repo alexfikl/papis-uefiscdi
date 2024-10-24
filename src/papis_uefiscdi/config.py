@@ -84,3 +84,9 @@ UEFISCDI_DATABASE_URL = {
 }
 """A mapping of database identifiers to URLs containing the databases themselves.
 """
+
+UEFISCDI_DEFAULT_VERSION = max(UEFISCDI_DATABASE_URL)
+"""Default version used for databases."""
+
+UEFISCDI_DEFAULT_PASSWORD = "uefiscdi"  # noqa: S105
+"""Default password used in several UEFISCDI documents."""
