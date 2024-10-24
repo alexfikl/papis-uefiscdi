@@ -5,6 +5,7 @@ import csv
 
 import pytest
 
+from papis_uefiscdi import uefiscdi
 from papis_uefiscdi.config import UEFISCDI_DATABASE_URL
 from papis_uefiscdi.testing import TemporaryConfiguration
 
@@ -12,9 +13,12 @@ from papis_uefiscdi.testing import TemporaryConfiguration
 @pytest.mark.parametrize(
     ("fmt", "version", "url"),
     [
+        # 2023
+        ("ais", 2023, UEFISCDI_DATABASE_URL[2023]["aisq"]),
+        ("jif", 2023, UEFISCDI_DATABASE_URL[2023]["jifq"]),
+        # 2024
+        ("ais", 2024, UEFISCDI_DATABASE_URL[2024]["aisq"]),
         ("jif", 2024, UEFISCDI_DATABASE_URL[2024]["jifq"]),
-        # ("jif", 2023, UEFISCDI_DATABASE_URL[2023]["jifq"]),
-        # ("ais", 2023, UEFISCDI_DATABASE_URL[2023]["aisq"]),
     ],
 )
 def test_parse_zone_data(
@@ -26,13 +30,13 @@ def test_parse_zone_data(
     assert filename is not None
 
     if fmt == "jif":
-        from papis_uefiscdi.uefiscdi import parse_uefiscdi_journal_impact_factor
-
-        result = parse_uefiscdi_journal_impact_factor(filename, version=version)
+        result = uefiscdi.parse_uefiscdi_journal_impact_factor_quartile(
+            filename, version=version
+        )
     elif fmt == "ais":
-        from papis_uefiscdi.uefiscdi import parse_uefiscdi_article_influence_score
-
-        result = parse_uefiscdi_article_influence_score(filename, version=version)
+        result = uefiscdi.parse_uefiscdi_article_influence_score_quartile(
+            filename, version=version
+        )
     else:
         raise ValueError(f"Unknown data format: '{fmt}'")
 
@@ -46,9 +50,14 @@ def test_parse_zone_data(
 @pytest.mark.parametrize(
     ("fmt", "version", "url"),
     [
+        # 2023
         ("ais", 2023, UEFISCDI_DATABASE_URL[2023]["ais"]),
         ("ris", 2023, UEFISCDI_DATABASE_URL[2023]["ris"]),
         ("rif", 2023, UEFISCDI_DATABASE_URL[2023]["rif"]),
+        # 2024
+        ("ais", 2024, UEFISCDI_DATABASE_URL[2024]["ais"]),
+        ("ris", 2024, UEFISCDI_DATABASE_URL[2024]["ris"]),
+        ("rif", 2024, UEFISCDI_DATABASE_URL[2024]["rif"]),
     ],
 )
 def test_parse_score_data(
@@ -60,19 +69,15 @@ def test_parse_score_data(
     assert filename is not None
 
     if fmt == "ais":
-        from papis_uefiscdi.uefiscdi import parse_uefiscdi_article_influence_scores
-
-        result = parse_uefiscdi_article_influence_scores(filename, version=version)
+        result = uefiscdi.parse_uefiscdi_article_influence_score(
+            filename, version=version
+        )
     elif fmt == "ris":
-        from papis_uefiscdi.uefiscdi import parse_uefiscdi_relative_influence_scores
-
-        result = parse_uefiscdi_relative_influence_scores(
+        result = uefiscdi.parse_uefiscdi_relative_influence_score(
             filename, version=version, password=None
         )
     elif fmt == "rif":
-        from papis_uefiscdi.uefiscdi import parse_uefiscdi_relative_impact_factors
-
-        result = parse_uefiscdi_relative_impact_factors(
+        result = uefiscdi.parse_uefiscdi_relative_impact_factor(
             filename, version=version, password=None
         )
     else:

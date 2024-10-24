@@ -3,7 +3,7 @@
 
 from __future__ import annotations
 
-INDEX_ID_TO_NAME = {
+INDEX_DISPLAY_NAME = {
     "AHCI": "Arts Humanities Citation Index",
     "ESCI": "Emerging Sources Citation Index",
     "SCIE": "Science Citation Index Expanded",

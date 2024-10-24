@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import pathlib
+import time
 from typing import Iterator, TypedDict
 
 from papis_uefiscdi.logging import get_logger
@@ -27,8 +28,7 @@ class Entry(TypedDict):
     category: str | None
     """Web of Science category for this journal."""
     index: str | None
-    """Citation index identifier (see :data:`~papis_uefiscdi.config.INDEX_ID_TO_NAME`).
-    """
+    """Citation index identifier."""
 
     name: str | None
     """Name of the journal in the provided format."""
@@ -72,7 +72,7 @@ def window(iterable: list[str]) -> Iterator[tuple[tuple[str, str], str]]:
         yield (iterable[i], iterable[i + 1]), x
 
 
-def parse_uefiscdi_journal_impact_factor(
+def parse_uefiscdi_journal_impact_factor_quartile(
     filename: str | pathlib.Path, *, version: int = 2023
 ) -> list[Entry]:
     """Parse Journal Impact Factor (JIF) ranking data from the given filename.
@@ -95,25 +95,26 @@ def parse_uefiscdi_journal_impact_factor(
 
     from papis_uefiscdi.pdf import (
         extract_text,
-        parse_2023_zone_entry,
-        parse_2024_zone_entries,
+        parse_2023_quartile_zone_entries,
+        parse_2024_quartile_zone_entries,
     )
 
     with open(filename, "rb") as f:
         pdf = pypdf.PdfReader(f)
 
+        t_start = time.time()
         results: list[Entry] = []
         for i, page in enumerate(pdf.pages):
-            lines = [line.text for line in extract_text(page)]
-
             if version == 2024:
-                journals = parse_2024_zone_entries(lines, quartile=0)
+                lines = [line.text for line in extract_text(page)]
+                journals = parse_2024_quartile_zone_entries(lines, fmt="jif")
             elif version == 2023:
-                journals = [
-                    journal
-                    for before, current in window(lines)
-                    if (journal := parse_2023_zone_entry(before, current)) is not None
+                lines = [
+                    text
+                    for line in page.extract_text().split("\n")
+                    if (text := line.strip())
                 ]
+                journals = parse_2023_quartile_zone_entries(lines, fmt="jif")
             else:
                 raise AssertionError
 
@@ -125,8 +126,14 @@ def parse_uefiscdi_journal_impact_factor(
                 len(results) + len(journals),
             )
             results.extend(journals)
+        t_end = time.time()
 
-        log.info("Extracted %d journals from %d pages", len(results), len(pdf.pages))
+        log.info(
+            "Extracted %d journals from %d pages (%.3fs)",
+            len(results),
+            len(pdf.pages),
+            t_end - t_start,
+        )
 
     return sorted(
         results,
@@ -145,7 +152,7 @@ def parse_uefiscdi_journal_impact_factor(
 # {{{ Article Influence Score
 
 
-def parse_uefiscdi_article_influence_score(
+def parse_uefiscdi_article_influence_score_quartile(
     filename: str | pathlib.Path, *, version: int = 2023
 ) -> list[Entry]:
     """Parse Article Influence Score (AIS) ranking data from the given filename.
@@ -168,25 +175,26 @@ def parse_uefiscdi_article_influence_score(
 
     from papis_uefiscdi.pdf import (
         extract_text,
-        parse_2023_zone_entry,
-        parse_2024_zone_entries,
+        parse_2023_quartile_zone_entries,
+        parse_2024_quartile_zone_entries,
     )
 
     with open(filename, "rb") as f:
         pdf = pypdf.PdfReader(f)
 
+        t_start = time.time()
         results: list[Entry] = []
         for i, page in enumerate(pdf.pages):
-            lines = [line.text for line in extract_text(page)]
-
             if version == 2024:
-                journals = parse_2024_zone_entries(lines, quartile=1)
+                lines = [line.text for line in extract_text(page)]
+                journals = parse_2024_quartile_zone_entries(lines, fmt="ais")
             elif version == 2023:
-                journals = [
-                    journal
-                    for before, current in window(lines)
-                    if (journal := parse_2023_zone_entry(before, current)) is not None
+                lines = [
+                    text
+                    for line in page.extract_text().split("\n")
+                    if (text := line.strip())
                 ]
+                journals = parse_2023_quartile_zone_entries(lines, fmt="ais")
             else:
                 raise AssertionError
 
@@ -198,8 +206,14 @@ def parse_uefiscdi_article_influence_score(
                 len(results) + len(journals),
             )
             results.extend(journals)
+        t_end = time.time()
 
-        log.info("Extracted %d journals from %d pages", len(results), len(pdf.pages))
+        log.info(
+            "Extracted %d journals from %d pages (%.3fs)",
+            len(results),
+            len(pdf.pages),
+            t_end - t_start,
+        )
 
     return sorted(
         results,
@@ -292,7 +306,7 @@ def _parse_ais_score_entries_2023(filename: pathlib.Path) -> list[Entry]:
     return results
 
 
-def parse_uefiscdi_article_influence_scores(
+def parse_uefiscdi_article_influence_score(
     filename: str | pathlib.Path,
     *,
     version: int = 2023,
@@ -329,7 +343,7 @@ def parse_uefiscdi_article_influence_scores(
 _parse_ris_score_entries_2023 = _parse_ais_score_entries_2023
 
 
-def parse_uefiscdi_relative_influence_scores(
+def parse_uefiscdi_relative_influence_score(
     filename: str | pathlib.Path,
     *,
     version: int = 2023,
@@ -366,7 +380,7 @@ def parse_uefiscdi_relative_influence_scores(
 _parse_rif_score_entries_2023 = _parse_ais_score_entries_2023
 
 
-def parse_uefiscdi_relative_impact_factors(
+def parse_uefiscdi_relative_impact_factor(
     filename: str | pathlib.Path,
     *,
     version: int = 2023,

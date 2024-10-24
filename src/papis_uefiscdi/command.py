@@ -15,7 +15,7 @@ import papis.document
 import papis.logging
 import papis.strings
 from papis_uefiscdi.config import (
-    INDEX_ID_TO_NAME,
+    INDEX_DISPLAY_NAME,
     UEFISCDI_DATABASE_URL,
     UEFISCDI_SUPPORTED_DATABASES,
 )
@@ -164,23 +164,23 @@ def parse_uefiscdi(
 
     entries: list[Any]
     if database == "aisq":
-        entries = uefiscdi.parse_uefiscdi_article_influence_score(
+        entries = uefiscdi.parse_uefiscdi_article_influence_score_quartile(
             filename, version=version
         )
     elif database == "jifq":
-        entries = uefiscdi.parse_uefiscdi_journal_impact_factor(
+        entries = uefiscdi.parse_uefiscdi_journal_impact_factor_quartile(
             filename, version=version
         )
     elif database == "ais":
-        entries = uefiscdi.parse_uefiscdi_article_influence_scores(
+        entries = uefiscdi.parse_uefiscdi_article_influence_score(
             filename, version=version, password=password
         )
     elif database == "ris":
-        entries = uefiscdi.parse_uefiscdi_relative_influence_scores(
+        entries = uefiscdi.parse_uefiscdi_relative_influence_score(
             filename, version=version
         )
     elif database == "rif":
-        entries = uefiscdi.parse_uefiscdi_relative_impact_factors(
+        entries = uefiscdi.parse_uefiscdi_relative_impact_factor(
             filename, version=version
         )
     else:
@@ -355,7 +355,7 @@ def cli_index(
 @click.option(
     "-i",
     "--index",
-    type=click.Choice(list(INDEX_ID_TO_NAME), case_sensitive=False),
+    type=click.Choice(list(INDEX_DISPLAY_NAME), case_sensitive=False),
     help="Web of Science citation index identifier",
 )
 @click.option(
