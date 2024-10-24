@@ -24,7 +24,7 @@ in a Papis database. When used, the command will add the following keys to the
 document:
 
 * ``uefiscdi_ais_quartile``: for the AIS quartile.
-* ``uefiscdi_jif_quartile``: for the jif quartile.
+* ``uefiscdi_jif_quartile``: for the JIF quartile.
 * ``uefiscdi_ais_score``: for the AIS score.
 * ``uefiscdi_rif_score``: for the RIF score.
 * ``uefiscdi_ris_score``: for the RIS score.
@@ -32,37 +32,32 @@ document:
 Examples
 --------
 
+* To download and index the available databases, run
+
+  .. code:: sh
+
+      papis uefiscdi index --year 2024
+
+  This call should be performed before adding or searching any database. It will
+  not be performed automatically.
+
 * To add the Article Impact Score (AIS) score to a document
 
   .. code:: sh
 
-      papis uefiscdi --database ais <QUERY>
+      papis uefiscdi add --database ais <QUERY>
 
-  If the chosen database has not yet been downloaded, this command may take a
-  while longer to download and parse the files from the UEFISCDI website.
-
-* If the database requires a password or not, this can be controlled with
-
-  .. code:: sh
-
-      papis uefiscdi --database ais --no-password <QUERY>
-
-  This is the case for the AIS database when using the XLSX format, but not the
-  case for the RIS database.
-
-* To update a database, simply tell the command to overwrite any existing data
-
-  .. code:: sh
-
-      papis uefiscdi --database ais --overwrite <QUERY>
+  If the chosen database has not yet been downloaded, you need to call
+  ``papis uefiscdi index --database ais`` first.
 
 * To explore the various databases, use
 
   .. code:: sh
 
-      papis explore uefiscdi --database ais <JOURNAL>
+      papis uefiscdi search --database ais <JOURNAL>
 
-  which allows searching for journal names.
+  which allows searching for journal names. Other entries of the entry can be
+  searched in a similar fashion, e.g. ISSN or Web of Science categories.
 
 Configuration Options
 ---------------------
@@ -88,11 +83,14 @@ Command-line Interface
 
 .. click:: papis_uefiscdi.command:cli
     :prog: papis uefiscdi
+    :nested: full
 
 Library
 =======
 
 .. automodule:: papis_uefiscdi.uefiscdi
+
+.. automodule:: papis_uefiscdi.config
 
 Indices and tables
 ==================

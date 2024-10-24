@@ -27,7 +27,8 @@ class Entry(TypedDict):
     category: str | None
     """Web of Science category for this journal."""
     index: str | None
-    """Citation index identifier (see :data:`INDEX_ID_TO_NAME`)."""
+    """Citation index identifier (see :data:`~papis_uefiscdi.config.INDEX_ID_TO_NAME`).
+    """
 
     name: str | None
     """Name of the journal in the provided format."""

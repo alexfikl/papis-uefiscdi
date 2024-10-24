@@ -243,7 +243,7 @@ def match_journal(
 # {{{ command
 
 
-@click.group("uefiscdi")
+@click.group("uefiscdi", invoke_without_command=True)
 @click.help_option("--help", "-h")
 @click.option(
     "--list-databases",
@@ -260,7 +260,9 @@ def cli(list_databases: bool) -> None:
 
     import colorama
 
-    for did, description in UEFISCDI_SUPPORTED_DATABASES.items():
+    from papis_uefiscdi.config import UEFISCDI_DATABASE_DISPLAY_NAME
+
+    for did, description in UEFISCDI_DATABASE_DISPLAY_NAME.items():
         click.echo(f"{colorama.Style.BRIGHT}{did}{colorama.Style.RESET_ALL}")
         click.echo(f"    {description}")
 
@@ -274,12 +276,21 @@ def cli(list_databases: bool) -> None:
 @cli.command("index")
 @click.help_option("--help", "-h")
 @click.option(
-    "-p",
-    "--password",
-    help="Password to use when opening the remote database file",
+    "-d",
+    "--database",
+    type=click.Choice(list(UEFISCDI_SUPPORTED_DATABASES), case_sensitive=False),
+    help="Name of the database to update (all by default)",
 )
 @click.option(
-    "--year",
+    "-p",
+    "--password",
+    help=(
+        "Password to use when opening the remote database file "
+        "(used by certain Excel files)"
+    ),
+)
+@click.option(
+    "--version",
     type=int,
     default=None,
     help="Year the database was released",
@@ -291,14 +302,25 @@ def cli(list_databases: bool) -> None:
     is_flag=True,
     help="Overwrite existing UEFISCDI databases",
 )
-def cli_index(password: str, year: int | None, overwrite: bool) -> None:
+def cli_index(
+    database: str | None,
+    password: str | None,
+    version: int | None,
+    overwrite: bool,
+) -> None:
     """Download and parse UEFISCDI databases"""
-    if year is None:
-        year = papis.config.get("version", section="uefiscdi")
+    if version is None:
+        version = papis.config.get("version", section="uefiscdi")
 
-    for name in UEFISCDI_SUPPORTED_DATABASES:
+    if password is None:
+        password = papis.config.get("password", section="uefiscdi")
+
+    databases = (
+        UEFISCDI_SUPPORTED_DATABASES if database is None else frozenset([database])
+    )
+    for name in databases:
         get_uefiscdi_database(
-            name, overwrite=overwrite, password=password, version=year
+            name, overwrite=overwrite, password=password, version=version
         )
 
 

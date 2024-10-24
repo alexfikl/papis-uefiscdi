@@ -13,8 +13,10 @@ INDEX_ID_TO_NAME = {
 full names.
 """
 
+UEFISCDI_SUPPORTED_DATABASES = frozenset({"aisq", "jifq", "ais", "ris", "rif"})
+"""A set of known names for UEFISCDI databases. These are internal identifiers."""
 
-UEFISCDI_SUPPORTED_DATABASES = {
+UEFISCDI_DATABASE_DISPLAY_NAME = {
     "aisq": "Article Influence Score (Quartiles)",
     "jifq": "Journal Impact Factor (Quartiles)",
     "ais": "Article Influence Score (Scores)",
@@ -25,7 +27,7 @@ UEFISCDI_SUPPORTED_DATABASES = {
 display purposes).
 """
 
-UEFISCDI_DATABASE_TO_KEY = {
+UEFISCDI_DATABASE_KEY = {
     "aisq": "uefiscdi_ais_quartile",
     "jifq": "uefiscdi_jif_quartile",
     "ais": "uefiscdi_ais_score",
