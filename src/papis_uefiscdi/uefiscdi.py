@@ -5,7 +5,7 @@ from __future__ import annotations
 
 import pathlib
 import time
-from typing import Iterator, TypedDict
+from typing import Any, Callable, Iterator, TypedDict
 
 from papis_uefiscdi.logging import get_logger
 
@@ -248,7 +248,30 @@ def _decrypt_file(filename: pathlib.Path, password: str) -> pathlib.Path:
         return filename
 
 
-def _parse_ais_score_entries_2023(filename: pathlib.Path) -> list[Entry]:
+def _normalize_2024_ais_row(row: tuple[Any, ...]) -> tuple[Any, ...]:
+    journal, issn, eissn, category, index, score = row
+
+    return journal, issn, eissn, category, index, score, None
+
+
+def _normalize_2023_ais_row(row: tuple[Any, ...]) -> tuple[Any, ...]:
+    journal, issn, eissn, category_index, score, quartile_value = row
+
+    category, index = str(category_index.value).split(" - ")
+    quartile = None if (q := str(quartile_value.value).upper()) == "N/A" else q
+
+    return journal, issn, eissn, category, index, score, quartile
+
+
+def _normalize_rif_ris_row(row: tuple[Any, ...]) -> tuple[Any, ...]:
+    journal, issn, eissn, score = row
+    category = index = None
+    return journal, issn, eissn, category, index, score, None
+
+
+def _parse_score_entries(
+    filename: pathlib.Path, getter: Callable[[tuple[Any, ...]], tuple[Any, ...]]
+) -> list[Entry]:
     import openpyxl
 
     wb = openpyxl.load_workbook(filename, read_only=True)
@@ -263,31 +286,17 @@ def _parse_ais_score_entries_2023(filename: pathlib.Path) -> list[Entry]:
 
     results: list[Entry] = []
     for row in rows:
-        if len(row) == 4:
-            # NOTE: RIS and RIF entries have 4 columns
-            journal, issn, eissn, score = row
-            category = index = quartile = None
-        elif len(row) == 6:
-            # NOTE: AIS has 6 columns
-            journal, issn, eissn, category_index, score, quartile_value = row
-
-            category, index = str(category_index.value).split(" - ")
-            category = titlecase(category.strip())
-            index = index.strip().upper()
-            quartile = None if (q := str(quartile_value.value).upper()) == "N/A" else q
-        else:
-            continue
-
+        journal, issn, eissn, category, index, score, quartile = getter(row)
         if score.value is None:
             break
 
         try:
-            score = float(score.value)  # type: ignore[arg-type]
+            score = float(score.value)
         except ValueError:
             score = None
 
-        issn_clean = str(issn.value).strip().upper()
-        eissn_clean = str(eissn.value).strip().upper()
+        issn = str(issn.value).strip().upper()
+        eissn = str(eissn.value).strip().upper()
 
         results.append(
             Entry(
@@ -295,8 +304,8 @@ def _parse_ais_score_entries_2023(filename: pathlib.Path) -> list[Entry]:
                 index=index,
                 name=titlecase(journal.value),
                 # NOTE: all ISSNs are of the form XXXX-XXX, so we ignore others
-                issn=None if len(issn_clean) != 9 else issn_clean,
-                eissn=None if len(eissn_clean) != 9 else eissn_clean,
+                issn=None if len(issn) != 9 else issn,
+                eissn=None if len(eissn) != 9 else eissn,
                 quartile=quartile,
                 position=None,
                 score=score,
@@ -327,8 +336,10 @@ def parse_uefiscdi_article_influence_score(
     if password is not None:
         decrypted_filename = _decrypt_file(decrypted_filename, password)
 
-    if version == 2023:
-        results = _parse_ais_score_entries_2023(decrypted_filename)
+    if version == 2024:
+        results = _parse_score_entries(decrypted_filename, _normalize_2024_ais_row)
+    elif version == 2023:
+        results = _parse_score_entries(decrypted_filename, _normalize_2023_ais_row)
     else:
         raise AssertionError
 
@@ -339,8 +350,6 @@ def parse_uefiscdi_article_influence_score(
 # }}}
 
 # {{{ Relative Influence Score
-
-_parse_ris_score_entries_2023 = _parse_ais_score_entries_2023
 
 
 def parse_uefiscdi_relative_influence_score(
@@ -364,8 +373,10 @@ def parse_uefiscdi_relative_influence_score(
     if password is not None:
         decrypted_filename = _decrypt_file(decrypted_filename, password)
 
-    if version == 2023:
-        results = _parse_ris_score_entries_2023(decrypted_filename)
+    if version == 2024:  # noqa: SIM114
+        results = _parse_score_entries(decrypted_filename, _normalize_rif_ris_row)
+    elif version == 2023:
+        results = _parse_score_entries(decrypted_filename, _normalize_rif_ris_row)
     else:
         raise AssertionError
 
@@ -376,8 +387,6 @@ def parse_uefiscdi_relative_influence_score(
 # }}}
 
 # {{{ Relative Impact Factor
-
-_parse_rif_score_entries_2023 = _parse_ais_score_entries_2023
 
 
 def parse_uefiscdi_relative_impact_factor(
@@ -401,8 +410,10 @@ def parse_uefiscdi_relative_impact_factor(
     if password is not None:
         decrypted_filename = _decrypt_file(decrypted_filename, password)
 
-    if version == 2023:
-        results = _parse_rif_score_entries_2023(decrypted_filename)
+    if version == 2024:  # noqa: SIM114
+        results = _parse_score_entries(decrypted_filename, _normalize_rif_ris_row)
+    elif version == 2023:
+        results = _parse_score_entries(decrypted_filename, _normalize_rif_ris_row)
     else:
         raise AssertionError
 
