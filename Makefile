@@ -71,13 +71,13 @@ requirements.txt: pyproject.toml
 
 requirements-dev.txt: pyproject.toml
 	uv pip compile --upgrade --resolution highest --python-version '3.10' \
-		--extra dev --extra docs \
+		--extra papis --extra dev --extra docs \
 		-o $@ $<
 .PHONY: requirements-dev.txt
 
 docs/requirements.txt: pyproject.toml
 	uv pip compile --upgrade --resolution highest --python-version '3.10' \
-		--extra docs \
+		--extra papis --extra docs \
 		-o $@ $<
 .PHONY: docs/requirements.txt
 
