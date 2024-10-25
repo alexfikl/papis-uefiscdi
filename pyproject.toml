@@ -43,8 +43,8 @@ dependencies = [
     "pypdf>=5",
     "pyperclip>=1",
     "requests>=2.32",
-    "titlecase>=2.4",
     "rich>=13",
+    "titlecase>=2.4",
 ]
 optional-dependencies.dev = [
     "mypy",
