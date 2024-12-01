@@ -165,15 +165,15 @@ HEADER_AIS_NAMES_2023 = (
 )
 
 _HEADER_FRAGMENTS_2023 = (
-    re.compile("Web of Science Category-Index"),
-    re.compile("Revista"),
-    re.compile("ISSN"),
-    re.compile("eISSN"),
-    re.compile("Q (JIF|AIS) 2022"),
-    re.compile("conform JCR"),
-    re.compile("iunie 2023"),
-    re.compile("Loc in zona"),
-    re.compile("Q (JIF|AIS)"),
+    re.compile(r"Web of Science Category-Index"),
+    re.compile(r"Revista"),
+    re.compile(r"ISSN"),
+    re.compile(r"eISSN"),
+    re.compile(r"Q (JIF|AIS) 2022"),
+    re.compile(r"conform JCR"),
+    re.compile(r"iunie 2023"),
+    re.compile(r"Loc in zona"),
+    re.compile(r"Q (JIF|AIS)"),
 )
 _LINE_2023_RE = re.compile(
     r"([\w &,\-]+) - (AHCI|ESCI|SCIE|SSCI)\s?"  # category | index

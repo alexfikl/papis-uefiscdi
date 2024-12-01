@@ -581,7 +581,7 @@ def tmp_config(request: SubRequest) -> Iterator[TemporaryConfiguration]:
     marker = request.node.get_closest_marker("config_setup")
     kwargs = marker.kwargs if marker else {}
 
-    # NOTE: support indirect fixture parametrizations that overwrite markers
+    # NOTE: support indirect fixture parameterizations that overwrite markers
     #   https://docs.pytest.org/en/latest/example/parametrize.html#apply-indirect-on-particular-arguments
     kwargs.update(getattr(request, "param", {}))
 
@@ -605,7 +605,7 @@ def tmp_library(request: SubRequest) -> Iterator[TemporaryLibrary]:
     marker = request.node.get_closest_marker("library_setup")
     kwargs = marker.kwargs if marker else {}
 
-    # NOTE: support indirect fixture parametrizations that overwrite markers
+    # NOTE: support indirect fixture parameterizations that overwrite markers
     kwargs.update(getattr(request, "param", {}))
 
     with TemporaryLibrary(**kwargs) as lib:

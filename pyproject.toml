@@ -64,7 +64,7 @@ optional-dependencies.docs = [
     "sphinx-click",
 ]
 optional-dependencies.papis = [
-    "papis>=0.13",
+    "papis>=0.14",
 ]
 urls.Repository = "https://github.com/alexfikl/papis-uefiscdi"
 entry-points."papis.command".uefiscdi = "papis_uefiscdi.command:cli"
