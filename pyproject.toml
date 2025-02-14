@@ -131,6 +131,15 @@ lint.isort.known-first-party = [
     "papis_uefiscdi",
 ]
 
+[tool.pytest.ini_options]
+testpaths = "test"
+addopts = [
+    "-rswx",
+    "--durations=25",
+    "--capture=no",
+    "--verbose",
+]
+
 [tool.mypy]
 strict = true
 python_version = "3.10"
