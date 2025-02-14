@@ -60,4 +60,9 @@ intersphinx_mapping = {
     "papis": ("https://papis.readthedocs.io/en/latest/", None),
 }
 
+nitpick_ignore_regex = [
+    # https://github.com/sphinx-doc/sphinx/issues/13178
+    ["py:class", r"pathlib._local.Path"],
+    ]
+
 # }}}
