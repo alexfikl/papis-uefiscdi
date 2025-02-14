@@ -3,4 +3,5 @@ wheel
 editables
 hatchling
 setuptools
+setuptools-scm
 poetry-core

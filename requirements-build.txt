@@ -5,7 +5,9 @@ editables==0.5
 hatchling==1.27.0
     # via -r requirements-build.in
 packaging==24.2
-    # via hatchling
+    # via
+    #   hatchling
+    #   setuptools-scm
 pathspec==0.12.1
     # via hatchling
 pip==25.0.1
@@ -15,9 +17,15 @@ pluggy==1.5.0
 poetry-core==2.0.1
     # via -r requirements-build.in
 setuptools==75.8.0
+    # via
+    #   -r requirements-build.in
+    #   setuptools-scm
+setuptools-scm==8.1.0
     # via -r requirements-build.in
 tomli==2.2.1 ; python_full_version < '3.11'
-    # via hatchling
+    # via
+    #   hatchling
+    #   setuptools-scm
 trove-classifiers==2025.1.15.22
     # via hatchling
 wheel==0.45.1

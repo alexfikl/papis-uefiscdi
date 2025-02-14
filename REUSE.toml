@@ -17,6 +17,7 @@ path = [
     "justfile",
     "README.rst",
     "pyproject.toml",
+    "requirements*.in",
     "requirements*.txt",
 ]
 precedence = "aggregate"
