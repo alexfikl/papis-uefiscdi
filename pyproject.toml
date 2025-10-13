@@ -81,7 +81,7 @@ packages = [
 ]
 
 [tool.ruff]
-target-version = "py38"
+target-version = "py310"
 line-length = 88
 
 preview = true
@@ -101,10 +101,12 @@ lint.select = [
     "RUF", # ruff
     "S",   # flake8-bandit
     "SIM", # flake8-simplify
+    "TC",  # flake8-type-checking
     "UP",  # pyupgrade
     "W",   # flake8
 ]
 lint.ignore = [
+    "A004",    # shadowing-builtin-function
     "A005",    # shadowing-builtin-module
     "E402",    # module-import-not-at-top-of-file
     "FBT001",  # boolean
@@ -120,7 +122,6 @@ lint.ignore = [
     "S101",    # assert
     "S102",    # exec-builtin
     "S311",
-    "UP037",   # quoted-annotation
 ]
 lint.flake8-quotes.docstring-quotes = "double"
 lint.flake8-quotes.inline-quotes = "double"

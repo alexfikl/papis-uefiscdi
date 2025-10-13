@@ -5,9 +5,9 @@ import csv
 
 import pytest
 
+from papis.testing import TemporaryConfiguration
 from papis_uefiscdi import uefiscdi
 from papis_uefiscdi.config import UEFISCDI_DATABASE_URL
-from papis_uefiscdi.testing import TemporaryConfiguration
 
 
 @pytest.mark.parametrize(
@@ -40,7 +40,7 @@ def test_parse_zone_data(
     else:
         raise ValueError(f"Unknown data format: '{fmt}'")
 
-    outfile = "{}.csv".format(url.split("/")[-1][:-4])
+    outfile = "{}.csv".format(url.rsplit("/", maxsplit=1)[-1][:-4])
     with open(outfile, "w", encoding="utf-8") as outf:
         writer = csv.DictWriter(outf, fieldnames=list(result[0]), quoting=csv.QUOTE_ALL)
         writer.writeheader()
@@ -83,7 +83,7 @@ def test_parse_score_data(
     else:
         raise ValueError(f"Unknown data format: '{fmt}'")
 
-    outfile = "{}.csv".format(url.split("/")[-1][:-5])
+    outfile = "{}.csv".format(url.rsplit("/", maxsplit=1)[-1][:-5])
     with open(outfile, "w", encoding="utf-8") as outf:
         writer = csv.DictWriter(outf, fieldnames=list(result[0]), quoting=csv.QUOTE_ALL)
         writer.writeheader()

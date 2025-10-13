@@ -8,21 +8,61 @@ import os
 import pathlib
 import sys
 import tempfile
-from typing import TYPE_CHECKING, Any, Sequence
+from typing import TYPE_CHECKING, Any
 
 from papis_uefiscdi.logging import get_logger
 
+# FIXME: remove when we can depend on Papis >=0.15
+try:
+    from papis.strings import FormatPattern  # type: ignore[attr-defined,unused-ignore]
+except ImportError:
+    from typing import NamedTuple
+
+    class FormatPattern(NamedTuple):  # type: ignore[no-redef,unused-ignore]
+        formatter: str | None
+        pattern: str
+
+        def __str__(self) -> str:
+            return self.pattern
+
+        def __repr__(self) -> str:
+            return repr(self.pattern)
+
+        def __bool__(self) -> bool:
+            return bool(self.pattern)
+
+        def __eq__(self, other: Any) -> bool:
+            if isinstance(other, str):
+                return self.pattern == other
+            elif isinstance(other, FormatPattern):
+                return self.pattern == other.pattern
+            else:
+                return False
+
+        def __hash__(self) -> int:
+            return hash(self.pattern)
+
+
 if TYPE_CHECKING:
+    from collections.abc import Sequence
+
     import requests
 
 log = get_logger(__name__)
 
+__all__ = (
+    "FormatPattern",
+    "download_document",
+    "get_session",
+    "run",
+)
+
 
 def get_session() -> requests.Session:
     try:
-        import papis.utils
+        from papis.utils import get_session
 
-        return papis.utils.get_session()
+        return get_session()
     except ImportError:
         import requests
 

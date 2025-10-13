@@ -5,12 +5,13 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass
-from typing import Any
-
-import pypdf
+from typing import TYPE_CHECKING, Any
 
 from papis_uefiscdi.logging import get_logger
 from papis_uefiscdi.uefiscdi import Entry
+
+if TYPE_CHECKING:
+    import pypdf
 
 log = get_logger(__name__)
 

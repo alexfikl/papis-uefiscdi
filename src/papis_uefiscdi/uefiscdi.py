@@ -5,9 +5,12 @@ from __future__ import annotations
 
 import pathlib
 import time
-from typing import Any, Callable, Iterator, TypedDict
+from typing import TYPE_CHECKING, Any, TypedDict
 
 from papis_uefiscdi.logging import get_logger
+
+if TYPE_CHECKING:
+    from collections.abc import Callable, Iterator
 
 log = get_logger(__name__)
 

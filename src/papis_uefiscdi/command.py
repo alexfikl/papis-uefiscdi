@@ -3,17 +3,12 @@
 
 from __future__ import annotations
 
-import json
 import pathlib
-from typing import Match, Pattern
+from typing import TYPE_CHECKING
 
 import click
 
-import papis.cli
 import papis.config
-import papis.document
-import papis.logging
-import papis.strings
 from papis_uefiscdi.config import (
     INDEX_DISPLAY_NAME,
     UEFISCDI_DATABASE_URL,
@@ -23,6 +18,12 @@ from papis_uefiscdi.config import (
 )
 from papis_uefiscdi.logging import get_logger
 from papis_uefiscdi.uefiscdi import Database, Entry
+from papis_uefiscdi.utils import FormatPattern
+
+if TYPE_CHECKING:
+    import re
+
+    from papis.document import Document
 
 log = get_logger(__name__)
 
@@ -59,6 +60,8 @@ def load_uefiscdi_database(database: str, version: int | None = None) -> Databas
         return Database(id=database, version=version, url="", entries=[])
 
     log.info("Database loaded from '%s'.", filename)
+
+    import json
 
     with open(filename, encoding="utf-8") as inf:
         db = json.load(inf)
@@ -119,6 +122,8 @@ def index_uefiscdi_database(
     if not filename.parent.exists():
         filename.parent.mkdir()
 
+    import json
+
     with open(filename, "w", encoding="utf-8") as outf:
         json.dump(db, outf, indent=2, sort_keys=False)
 
@@ -131,7 +136,7 @@ def to_dummy_document(
     index: int,
     name: str,
     version: int,
-) -> papis.document.Document:
+) -> Document:
     # NOTE: this is essentially constructed so that it looks nice with the default
     # picker header format used by papis at the moment, but it should look ok
     # with other pickers as well
@@ -141,7 +146,9 @@ def to_dummy_document(
     if score != "N/A":
         score = f"{score:.3f}"
 
-    return papis.document.from_data({
+    from papis.document import from_data
+
+    return from_data({
         # NOTE: used to retrieve original entry
         "_id": index,
         "title": "[{}] {}".format(
@@ -159,16 +166,18 @@ def to_dummy_document(
 
 
 def match_journal(
-    document: papis.document.Document,
-    search: Pattern[str],
-    match_format: str | None = None,
+    document: Document,
+    search: re.Pattern[str],
+    match_format: str | FormatPattern | None = None,
     doc_key: str | None = None,
-) -> Match[str] | None:
-    match_format = match_format or "{doc[title]}{doc[author]}"
+) -> re.Match[str] | None:
+    from papis.format import format
+
+    match_format = match_format or FormatPattern("python", "{doc[title]}{doc[author]}")
     if doc_key is not None:
         match_string = str(document[doc_key])
     else:
-        match_string = papis.format.format(match_format, document)
+        match_string = format(match_format, document)
 
     return search.match(match_string)
 
@@ -360,7 +369,7 @@ def cli_search(
 
     from papis.docmatcher import DocMatcher
 
-    DocMatcher.match_format = "{doc[title]}{doc[author]}"
+    DocMatcher.match_format = FormatPattern("python", "{doc[title]}{doc[author]}")
     DocMatcher.set_search(query)
     DocMatcher.set_matcher(match_journal)
     DocMatcher.parse()
@@ -375,7 +384,7 @@ def cli_search(
 
     from papis.pick import pick_doc
 
-    def key_func(d: papis.document.Document) -> str | float | int:
+    def key_func(d: Document) -> str | float | int:
         field = d[sort_field]
         if field is None:
             return 0.0 if sort_field == "score" else "ZZ"
@@ -386,6 +395,8 @@ def cli_search(
     filtered_docs = sorted(filtered_docs, key=key_func, reverse=sort_reverse)
     filtered_docs = [entry for entry in pick_doc(filtered_docs) if entry]
     filtered_entries = [db["entries"][d["_id"]] for d in filtered_docs]
+
+    import json
 
     click.echo(json.dumps(filtered_entries, indent=2, sort_keys=True))
 
