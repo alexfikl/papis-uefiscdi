@@ -35,7 +35,7 @@ except ImportError:
             if isinstance(other, str):
                 return self.pattern == other
             elif isinstance(other, FormatPattern):
-                return self.pattern == other.pattern
+                return bool(self.pattern == other.pattern)
             else:
                 return False
 
