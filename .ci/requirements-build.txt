@@ -22,11 +22,11 @@ setuptools==80.9.0
     #   setuptools-scm
 setuptools-scm==9.2.2
     # via -r .ci/requirements-build.in
-tomli==2.3.0 ; python_full_version < '3.11'
+tomli==2.4.0 ; python_full_version < '3.11'
     # via
     #   hatchling
     #   setuptools-scm
-trove-classifiers==2025.12.1.14
+trove-classifiers==2026.1.12.15
     # via hatchling
 wheel==0.45.1
     # via -r .ci/requirements-build.in
